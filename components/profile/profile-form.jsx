@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { FaLightbulb } from "react-icons/fa";
 
 export default function ProfileForm() {
   const [profile, setProfile] = useState({
@@ -24,6 +25,8 @@ export default function ProfileForm() {
       try {
         const response = await fetch("/api/user/profile");
         if (!response.ok) {
+          console.log(response);
+          
           throw new Error("Failed to fetch profile");
         }
         const data = await response.json();
@@ -142,6 +145,7 @@ export default function ProfileForm() {
           onChange={handleChange}
           disabled
         />
+        <p className="flex items-center gap-1 opacity-70 text-sm"><FaLightbulb />click <span className="underline  cursor-pointer" onClick={() => router.push("/account/addresses")}>Address book</span>to add or edit address</p>
       </div>
 
       <div className="flex justify-end gap-4">

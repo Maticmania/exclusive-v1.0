@@ -10,7 +10,6 @@ import { cn } from "@/lib/utils"
 export default function Navigation() {
   const pathname = usePathname()
   const { user, isAuthenticated, isAdmin, isSuperAdmin, isLoading } = useAuthStore()
-  console.log(pathname);
   
   return (
     <nav className="bg-white shadow-sm">

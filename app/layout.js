@@ -28,7 +28,12 @@ export default function RootLayout({ children }) {
       >
         <AuthSessionProvider>
           <Navigation />
+        {/* <div className="hidden lg:block">
           <Toaster position="bottom-right" />
+        </div>
+        <div className="block lg:hidden">
+          <Toaster position="top-right" />
+        </div> */}
           {children}
           {process.env.NODE_ENV !== "production" && <StoreDebug />}
           </AuthSessionProvider>

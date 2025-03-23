@@ -9,7 +9,8 @@ import { Label } from "@/components/ui/label"
 import { Eye, EyeOff } from "lucide-react"
 import Link from "next/link"
 
-export default function SigninForm() {
+export default function SignupForm() {
+  const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
@@ -23,17 +24,38 @@ export default function SigninForm() {
     setError("")
 
     try {
+      const response = await fetch("/api/auth/signup", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ name, email, password }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || "Something went wrong")
+      }
+
+      // Get the callback URL from the URL query parameters
+      const params = new URLSearchParams(window.location.search)
+      const callbackUrl = params.get("callbackUrl") || "/"
+
+      // Sign in the user after successful signup
       const result = await signIn("credentials", {
         redirect: false,
         email,
         password,
+        callbackUrl,
       })
-      
+
       if (result?.error) {
-        throw new Error("Invalid credentials")
+        throw new Error(result.error || "Failed to sign in")
       }
 
-      router.push("/")
+      // Redirect to the callback URL or home
+      router.push(callbackUrl)
       router.refresh()
     } catch (error) {
       setError(error.message)
@@ -45,23 +67,23 @@ export default function SigninForm() {
   return (
     <div className="w-full max-w-md mx-auto">
       <div className="text-center mb-8">
-        <h1 className="text-2xl font-bold">Sign in to your account</h1>
-        <p className="text-muted-foreground mt-2">Enter your credentials below</p>
+        <h1 className="text-2xl font-bold">Create an account</h1>
+        <p className="text-muted-foreground mt-2">Enter your details below</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="name">Name</Label>
+          <Input id="name" type="text" value={name} onChange={(e) => setName(e.target.value)} required />
+        </div>
+
         <div className="space-y-2">
           <Label htmlFor="email">Email</Label>
           <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
         </div>
 
         <div className="space-y-2">
-          <div className="flex justify-between items-center">
-            <Label htmlFor="password">Password</Label>
-            <Link href="/auth/forgot-password" className="text-sm text-primary hover:underline">
-              Forgot password?
-            </Link>
-          </div>
+          <Label htmlFor="password">Password</Label>
           <div className="relative">
             <Input
               id="password"
@@ -87,7 +109,7 @@ export default function SigninForm() {
         {error && <p className="text-red-500 text-sm">{error}</p>}
 
         <Button type="submit" className="w-full" disabled={loading}>
-          {loading ? "Signing in..." : "Sign in"}
+          {loading ? "Creating Account..." : "Create an Account"}
         </Button>
 
         <div className="relative my-4">
@@ -103,7 +125,11 @@ export default function SigninForm() {
           type="button"
           variant="outline"
           className="w-full"
-          onClick={() => signIn("google", { callbackUrl: "/" })}
+          onClick={() => {
+            const params = new URLSearchParams(window.location.search)
+            const callbackUrl = params.get("callbackUrl") || "/"
+            signIn("google", { callbackUrl })
+          }}
         >
           <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
             <path
@@ -123,13 +149,13 @@ export default function SigninForm() {
               fill="#EA4335"
             />
           </svg>
-          Sign in with Google
+          Sign up with Google
         </Button>
 
         <p className="text-center text-sm mt-4">
-          Don&apos;t have an account?{" "}
-          <Link href="/auth/signup" className="text-primary hover:underline">
-            Create an account
+          Already have an account?{" "}
+          <Link href="/auth/signin" className="text-primary hover:underline">
+            Log in
           </Link>
         </p>
       </form>
