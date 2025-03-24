@@ -9,8 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Eye, EyeOff } from "lucide-react"
 import Link from "next/link"
 
-export default function SignupForm() {
-  const [name, setName] = useState("")
+export default function SigninForm() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
@@ -24,25 +23,10 @@ export default function SignupForm() {
     setError("")
 
     try {
-      const response = await fetch("/api/auth/signup", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ name, email, password }),
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || "Something went wrong")
-      }
-
       // Get the callback URL from the URL query parameters
       const params = new URLSearchParams(window.location.search)
       const callbackUrl = params.get("callbackUrl") || "/"
 
-      // Sign in the user after successful signup
       const result = await signIn("credentials", {
         redirect: false,
         email,
@@ -51,7 +35,7 @@ export default function SignupForm() {
       })
 
       if (result?.error) {
-        throw new Error(result.error || "Failed to sign in")
+        throw new Error(result.error || "Invalid credentials")
       }
 
       // Redirect to the callback URL or home
@@ -67,23 +51,23 @@ export default function SignupForm() {
   return (
     <div className="w-full max-w-md mx-auto">
       <div className="text-center mb-8">
-        <h1 className="text-2xl font-bold">Create an account</h1>
-        <p className="text-muted-foreground mt-2">Enter your details below</p>
+        <h1 className="text-2xl font-bold">Sign in to your account</h1>
+        <p className="text-muted-foreground mt-2">Enter your credentials below</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="name">Name</Label>
-          <Input id="name" type="text" value={name} onChange={(e) => setName(e.target.value)} required />
-        </div>
-
         <div className="space-y-2">
           <Label htmlFor="email">Email</Label>
           <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="password">Password</Label>
+          <div className="flex justify-between items-center">
+            <Label htmlFor="password">Password</Label>
+            <Link href="/auth/forgot-password" className="text-sm text-primary hover:underline">
+              Forgot password?
+            </Link>
+          </div>
           <div className="relative">
             <Input
               id="password"
@@ -109,7 +93,7 @@ export default function SignupForm() {
         {error && <p className="text-red-500 text-sm">{error}</p>}
 
         <Button type="submit" className="w-full" disabled={loading}>
-          {loading ? "Creating Account..." : "Create an Account"}
+          {loading ? "Signing in..." : "Sign in"}
         </Button>
 
         <div className="relative my-4">
@@ -149,13 +133,13 @@ export default function SignupForm() {
               fill="#EA4335"
             />
           </svg>
-          Sign up with Google
+          Sign in with Google
         </Button>
 
         <p className="text-center text-sm mt-4">
-          Already have an account?{" "}
-          <Link href="/auth/signin" className="text-primary hover:underline">
-            Log in
+          Don&apos;t have an account?{" "}
+          <Link href="/auth/signup" className="text-primary hover:underline">
+            Create an account
           </Link>
         </p>
       </form>

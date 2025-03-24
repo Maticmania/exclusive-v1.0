@@ -145,7 +145,7 @@ export default function ProfileForm() {
           onChange={handleChange}
           disabled
         />
-        <p className="flex items-center gap-1 opacity-70 text-sm"><FaLightbulb />click <span className="underline  cursor-pointer" onClick={() => router.push("/account/addresses")}>Address book</span>to add or edit address</p>
+        <p className="flex items-center gap-1 opacity-70 text-sm"><FaLightbulb />Click <span className="underline  cursor-pointer" onClick={() => router.push("/account/addresses")}>Address book</span>to add or edit address</p>
       </div>
 
       <div className="flex justify-end gap-4">

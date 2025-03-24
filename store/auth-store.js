@@ -122,11 +122,20 @@ export const useCartStore = create(
 
           const data = await response.json()
 
+          // Ensure we're properly handling the data
+          const sanitizedItems = data.items.map((item) => ({
+            product: {
+              _id: item.product._id.toString(),
+              name: item.product.name,
+              price: item.product.price,
+              images: item.product.images || [],
+              // Add other necessary fields but avoid complex objects
+            },
+            quantity: item.quantity,
+          }))
+
           set({
-            items: data.items.map((item) => ({
-              product: item.product,
-              quantity: item.quantity,
-            })),
+            items: sanitizedItems,
             total: data.total,
           })
         } catch (error) {
