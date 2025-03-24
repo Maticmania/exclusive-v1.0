@@ -27,11 +27,16 @@ export default function AdminLayout({ children }) {
     setIsMobileMenuOpen(false)
   }, [pathname])
 
-  // Navigation items
+  // Update the navItems array to include the management page
   const navItems = [
     {
       title: "Dashboard",
       href: "/admin/dashboard",
+      icon: LayoutDashboard,
+    },
+    {
+      title: "Management",
+      href: "/admin/management",
       icon: LayoutDashboard,
     },
     {
