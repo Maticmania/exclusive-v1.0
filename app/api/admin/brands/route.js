@@ -3,6 +3,7 @@ import { hasRole, unauthorized, forbidden } from "@/lib/auth-middleware"
 import {connectToDatabase} from "@/lib/mongodb"
 import Brand from "@/models/brand"
 import { slugify } from "@/lib/utils"
+import { uploadSingleImage } from "@/lib/cloudinaryUpload"
 
 // Get all brands
 export async function GET(req) {
@@ -42,6 +43,12 @@ export async function POST(req) {
       return NextResponse.json({ error: "Brand already exists" }, { status: 409 })
     }
 
+    // Upload logo to Cloudinary
+    let logoUrl = null
+    if (logo) {
+      logoUrl = await uploadSingleImage(logo) // Upload Base64 string
+    }
+
     // Create slug from name
     const slug = slugify(name)
 
@@ -49,7 +56,7 @@ export async function POST(req) {
       name,
       slug,
       description,
-      logo,
+      logo :logoUrl,
       featured: featured || false,
     })
 

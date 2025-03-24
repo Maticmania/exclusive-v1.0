@@ -9,35 +9,40 @@ import { X, ImagePlus, Loader2 } from "lucide-react"
 export default function ImageUploader({ images = [], onChange, maxImages = 5 }) {
   const [isUploading, setIsUploading] = useState(false)
 
+  const convertFileToBase64 = (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.readAsDataURL(file) // Convert file to base64
+      reader.onload = () => resolve(reader.result)
+      reader.onerror = (error) => reject(error)
+    })
+  }
+  
   const handleImageUpload = async (e) => {
     const files = Array.from(e.target.files)
-
     if (!files.length) return
-
-    // Check if adding these files would exceed the maximum
+  
     if (images.length + files.length > maxImages) {
       toast.error(`You can only upload a maximum of ${maxImages} images`)
       return
     }
-
+  
     setIsUploading(true)
-
+  
     try {
-      // In a real app, you would upload these to a storage service
-      // For this example, we'll create object URLs
-      const newImages = files.map((file) => URL.createObjectURL(file))
-
-      // Add the new images to the existing ones
-      onChange([...images, ...newImages])
-
-      toast.success(`${files.length} image${files.length > 1 ? "s" : ""} uploaded`)
+      // Convert files to base64
+      const base64Images = await Promise.all(files.map((file) => convertFileToBase64(file)))
+  
+      // Add images to state (temporary preview before saving to backend)
+      onChange([...images, ...base64Images])
+  
+      toast.success(`${files.length} image${files.length > 1 ? "s" : ""} added`)
     } catch (error) {
-      console.error("Error uploading images:", error)
-      toast.error("Failed to upload images")
+      console.error("Error converting images:", error)
+      toast.error("Failed to process images")
     } finally {
       setIsUploading(false)
-      // Reset the input
-      e.target.value = ""
+      e.target.value = "" // Reset file input
     }
   }
 

@@ -3,14 +3,13 @@ import { hasRole, unauthorized, forbidden } from "@/lib/auth-middleware"
 import {connectToDatabase} from "@/lib/mongodb"
 import Category from "@/models/category"
 import { slugify } from "@/lib/utils"
+import { uploadSingleImage } from "@/lib/cloudinaryUpload"
 
 // Get all categories
 export async function GET(req) {
   try {
     await connectToDatabase()
-
     const categories = await Category.find().sort({ name: 1 })
-
     return NextResponse.json(categories)
   } catch (error) {
     console.error("Error fetching categories:", error)
@@ -19,16 +18,15 @@ export async function GET(req) {
 }
 
 // Create a new category (admin and superadmin only)
+
 export async function POST(req) {
   try {
     const { authorized, error } = await hasRole(["admin", "superadmin"])
-
     if (!authorized) {
       return error === "Unauthorized" ? unauthorized() : forbidden()
     }
 
     const { name, description, image, featured } = await req.json()
-
     if (!name) {
       return NextResponse.json({ error: "Category name is required" }, { status: 400 })
     }
@@ -37,9 +35,14 @@ export async function POST(req) {
 
     // Check if category already exists
     const existingCategory = await Category.findOne({ name })
-
     if (existingCategory) {
       return NextResponse.json({ error: "Category already exists" }, { status: 409 })
+    }
+
+    // Upload image to Cloudinary (if provided)
+    let imageUrl = null
+    if (image) {
+      imageUrl = await uploadSingleImage(image) // Upload Base64 string
     }
 
     // Create slug from name
@@ -49,7 +52,7 @@ export async function POST(req) {
       name,
       slug,
       description,
-      image,
+      image: imageUrl, // Store the Cloudinary URL
       featured: featured || false,
     })
 
@@ -61,4 +64,5 @@ export async function POST(req) {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
+
 

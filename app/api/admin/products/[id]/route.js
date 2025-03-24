@@ -5,6 +5,8 @@ import Product from "@/models/product"
 import Category from "@/models/category"
 import Brand from "@/models/brand"
 import { slugify } from "@/lib/utils"
+import { uploadMultipleImages, deleteImageFromCloudinary } from "@/lib/cloudinaryUpload" // Import Cloudinary functions
+
 
 // Get a single product (admin and superadmin only)
 export async function GET(req, { params }) {
@@ -34,7 +36,6 @@ export async function GET(req, { params }) {
 export async function PUT(req, { params }) {
   try {
     const { authorized, error } = await hasRole(["admin", "superadmin"])
-
     if (!authorized) {
       return error === "Unauthorized" ? unauthorized() : forbidden()
     }
@@ -44,18 +45,14 @@ export async function PUT(req, { params }) {
     // Validate required fields
     if (!productData.name || !productData.price || !productData.category) {
       return NextResponse.json(
-        {
-          error: "Missing required fields",
-          details: "Name, price, and category are required",
-        },
-        { status: 400 },
+        { error: "Missing required fields", details: "Name, price, and category are required" },
+        { status: 400 }
       )
     }
 
     await connectToDatabase()
 
     const product = await Product.findById(params.id)
-
     if (!product) {
       return NextResponse.json({ error: "Product not found" }, { status: 404 })
     }
@@ -77,30 +74,35 @@ export async function PUT(req, { params }) {
     // Update slug if name changes
     if (productData.name !== product.name) {
       const slug = slugify(productData.name)
+      const existingProduct = await Product.findOne({ slug, _id: { $ne: params.id } })
 
-      // Check if slug already exists
-      const existingProduct = await Product.findOne({
-        slug,
-        _id: { $ne: params.id },
-      })
-
-      if (existingProduct) {
-        // Append a random string to make the slug unique
-        const randomString = Math.random().toString(36).substring(2, 7)
-        productData.slug = `${slug}-${randomString}`
-      } else {
-        productData.slug = slug
-      }
+      productData.slug = existingProduct
+        ? `${slug}-${Math.random().toString(36).substring(2, 7)}`
+        : slug
     }
 
-    // Update product
-    Object.keys(productData).forEach((key) => {
-      product[key] = productData[key]
-    })
+    // Handle Image Updates
+    if (productData.images) {
+      // Determine images to keep (old images still in request)
+      const newImageSet = new Set(productData.images)
+      const imagesToDelete = product.images.filter((img) => !newImageSet.has(img))
 
+      // Delete removed images from Cloudinary
+      await Promise.all(imagesToDelete.map((img) => deleteImageFromCloudinary(img)))
+
+      // Upload new images (if any)
+      const uploadedImages = await uploadMultipleImages(
+        productData.images.filter((img) => !product.images.includes(img))
+      )
+
+      // Merge old and new images
+      productData.images = [...new Set([...product.images, ...uploadedImages])]
+    }
+
+    // Update product data
+    Object.assign(product, productData)
     await product.save()
 
-    // Populate category and brand for response
     await product.populate("category", "name")
     await product.populate("brand", "name")
 
@@ -115,18 +117,23 @@ export async function PUT(req, { params }) {
 export async function DELETE(req, { params }) {
   try {
     const { authorized, error } = await hasRole(["admin", "superadmin"])
-
     if (!authorized) {
       return error === "Unauthorized" ? unauthorized() : forbidden()
     }
 
     await connectToDatabase()
 
-    const product = await Product.findByIdAndDelete(params.id)
-
+    const product = await Product.findById(params.id)
     if (!product) {
       return NextResponse.json({ error: "Product not found" }, { status: 404 })
     }
+
+    // Delete all product images from Cloudinary
+    if (product.images && product.images.length > 0) {
+      await Promise.all(product.images.map((img) => deleteImageFromCloudinary(img)))
+    }
+
+    await Product.findByIdAndDelete(params.id)
 
     return NextResponse.json({ message: "Product deleted successfully" })
   } catch (error) {

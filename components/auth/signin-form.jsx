@@ -35,7 +35,7 @@ export default function SigninForm() {
       })
 
       if (result?.error) {
-        throw new Error(result.error || "Invalid credentials")
+        throw new Error("Invalid credentials")
       }
 
       // Redirect to the callback URL or home

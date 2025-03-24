@@ -10,7 +10,7 @@ import AddToWishlistButton from "@/components/products/add-to-wishlist-button"
 import RelatedProducts from "@/components/products/related-products"
 
 export async function generateMetadata({ params }) {
-  const product = await getProduct(params.productId)
+  const product = await getProduct(params?.productId)
 
   if (!product) {
     return {
@@ -38,11 +38,11 @@ async function getProduct(productId) {
     return {
       ...product,
       _id: product._id.toString(),
-      category: product.category
-        ? typeof product.category === "object"
-          ? { _id: product.category._id.toString(), name: product.category.name }
-          : product.category.toString()
-        : null,
+      category: product.category,
+        // ? typeof product.category === "object"
+        //   ? { _id: product.category._id.toString(), name: product.category.name }
+        //   : product.category.toString()
+        // : null,
       brand: product.brand
         ? typeof product.brand === "object"
           ? { _id: product.brand._id.toString(), name: product.brand.name }
@@ -91,7 +91,7 @@ async function getRelatedProducts(categoryId, currentProductId) {
 }
 
 export default async function ProductPage({ params }) {
-  const product = await getProduct(params.productId)
+  const product = await getProduct(params?.productId)
 
   if (!product) {
     notFound()
@@ -100,7 +100,8 @@ export default async function ProductPage({ params }) {
   // Get the category ID for related products
   const categoryId = product.category && typeof product.category === "object" ? product.category._id : product.category
 
-  const relatedProducts = await getRelatedProducts(categoryId, params.productId)
+  const relatedProducts = await getRelatedProducts(categoryId, params?.productId)
+console.log(product);
 
   return (
     <div className="container max-w-screen-xl mx-auto px-4 py-10">
@@ -144,7 +145,7 @@ export default async function ProductPage({ params }) {
             <p className="text-muted-foreground">{product.description}</p>
             <p className="text-sm">
               <span className="font-medium">Category:</span>{" "}
-              {product.category && typeof product.category === "object" ? product.category.name : "Uncategorized"}
+              { product.category.name }
             </p>
             <p className="text-sm">
               <span className="font-medium">Availability:</span>{" "}
