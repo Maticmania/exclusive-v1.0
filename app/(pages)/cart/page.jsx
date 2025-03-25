@@ -1,4 +1,5 @@
 import CartPage from "@/components/cart/cart-page"
+import { Breadcrumb } from "@/components/ui/breadcrumb"
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth"
 import {connectToDatabase} from "@/lib/mongodb"
@@ -44,6 +45,18 @@ export default async function CartPageWrapper() {
   const session = await getServerSession(authOptions)
   const cartItems = session?.user ? await getCartItems(session.user.id) : []
 
-  return <CartPage initialCartItems={cartItems} />
+  // Breadcrumb items
+  const breadcrumbItems = [{ label: "Cart" }]
+
+  return (
+    <div className="container max-w-screen-xl mx-auto px-4 py-10">
+      {/* Breadcrumbs */}
+      <div className="mb-6">
+        <Breadcrumb items={breadcrumbItems} />
+      </div>
+
+      <CartPage initialCartItems={cartItems} />
+    </div>
+  )
 }
 

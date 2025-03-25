@@ -89,7 +89,10 @@ export default function AdminLayout({ children }) {
             {filteredNavItems.map((item) => (
               <SidebarMenuItem key={item.href}>
                 <Link href={item.href} legacyBehavior>
-                  <SidebarMenuButton isActive={pathname === item.href || pathname.startsWith(`${item.href}/`)}>
+                  <SidebarMenuButton
+                    isActive={pathname === item.href || pathname.startsWith(`${item.href}/`)}
+                    className="cursor-pointer transition-colors hover:bg-gray-100"
+                  >
                     <item.icon className="h-5 w-5 mr-2" />
                     <span>{item.title}</span>
                   </SidebarMenuButton>
@@ -126,10 +129,10 @@ export default function AdminLayout({ children }) {
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={`flex items-center px-4 py-3 text-sm rounded-md transition-colors ${
+                    className={`flex items-center px-4 py-3 text-sm rounded-md transition-colors cursor-pointer ${
                       pathname === item.href || pathname.startsWith(`${item.href}/`)
                         ? "bg-primary text-primary-foreground"
-                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                        : "text-muted-foreground hover:bg-gray-100 hover:text-foreground"
                     }`}
                   >
                     <item.icon className="mr-3 h-5 w-5" />

@@ -1,7 +1,8 @@
 import { Suspense } from "react"
 import ProductList from "@/components/products/product-list"
 import ProductFilters from "@/components/products/product-filters"
-import { connectToDatabase } from "@/lib/mongodb"
+import { Breadcrumb } from "@/components/ui/breadcrumb"
+import {connectToDatabase} from "@/lib/mongodb"
 import Product from "@/models/product"
 
 export const metadata = {
@@ -9,12 +10,13 @@ export const metadata = {
   description: "Browse our exclusive collection of products",
 }
 
-// Fetch products from the database (Server Component)
+// Fetch products from the database
 async function getProducts() {
   await connectToDatabase()
 
   const products = await Product.find().sort({ createdAt: -1 }).lean()
 
+  // Convert MongoDB _id to string and properly serialize all objects
   return products.map((product) => ({
     ...product,
     _id: product._id.toString(),
@@ -38,17 +40,22 @@ async function getProducts() {
 export default async function ProductsPage() {
   const products = await getProducts()
 
+  // Breadcrumb items
+  const breadcrumbItems = [{ label: "Products" }]
+
   return (
     <div className="container max-w-screen-xl mx-auto px-4 py-10">
+      {/* Breadcrumbs */}
+      <div className="mb-6">
+        <Breadcrumb items={breadcrumbItems} />
+      </div>
+
       <div className="flex flex-col space-y-4">
         <h1 className="text-3xl font-bold">Products</h1>
 
         <div className="flex flex-col md:flex-row gap-6">
           <div className="w-full md:w-1/4">
-            {/* Ensure ProductFilters is a client component */}
-            <Suspense fallback={<div>Loading filters...</div>}>
-              <ProductFilters />
-            </Suspense>
+            <ProductFilters />
           </div>
 
           <div className="w-full md:w-3/4">
@@ -61,3 +68,4 @@ export default async function ProductsPage() {
     </div>
   )
 }
+

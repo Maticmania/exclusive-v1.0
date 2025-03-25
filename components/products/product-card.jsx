@@ -113,6 +113,16 @@ export default function ProductCard({ product }) {
         </div>
       )}
 
+      {/* Flash Sale badge */}
+      {product.flashSale &&
+        product.flashSale.isOnFlashSale &&
+        new Date(product.flashSale.flashSaleStartDate) <= new Date() &&
+        new Date(product.flashSale.flashSaleEndDate) >= new Date() && (
+          <div className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded z-10">
+            FLASH SALE
+          </div>
+        )}
+
       <div className="relative h-48 w-full overflow-hidden">
         <Link href={`/products/${product._id}`}>
           <Image
@@ -149,9 +159,24 @@ export default function ProductCard({ product }) {
         </Link>
 
         <div className="flex items-center gap-2 mb-2">
-          <span className="font-bold text-primary">{formatCurrency(product.price)}</span>
-          {product.compareAtPrice && (
-            <span className="text-gray-400 text-sm line-through">{formatCurrency(product.compareAtPrice)}</span>
+          {product.flashSale &&
+          product.flashSale.isOnFlashSale &&
+          new Date(product.flashSale.flashSaleStartDate) <= new Date() &&
+          new Date(product.flashSale.flashSaleEndDate) >= new Date() ? (
+            <>
+              <span className="font-bold text-primary">{formatCurrency(product.currentPrice)}</span>
+              <span className="text-gray-400 text-sm line-through">{formatCurrency(product.price)}</span>
+              <span className="bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-sm">
+                {product.flashSale.discountPercentage}% OFF
+              </span>
+            </>
+          ) : (
+            <>
+              <span className="font-bold text-primary">{formatCurrency(product.price)}</span>
+              {product.compareAtPrice && (
+                <span className="text-gray-400 text-sm line-through">{formatCurrency(product.compareAtPrice)}</span>
+              )}
+            </>
           )}
         </div>
 

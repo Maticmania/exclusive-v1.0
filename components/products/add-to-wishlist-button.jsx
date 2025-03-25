@@ -75,9 +75,9 @@ export default function AddToWishlistButton({ productId }) {
       size="icon"
       onClick={handleToggleWishlist}
       disabled={isAdding}
-      className={isWishlisted ? "text-primary border-primary" : ""}
+      className={isWishlisted ? "text-red-500 border-red-200" : ""}
     >
-      <Heart className={`h-5 w-5 ${isWishlisted ? "fill-primary" : ""}`} />
+      <Heart className={`h-4 w-4 ${isWishlisted ? "fill-red-500" : ""}`} />
     </Button>
   )
 }

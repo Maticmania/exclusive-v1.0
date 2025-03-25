@@ -1,7 +1,9 @@
 import { Inter, Poppins } from "next/font/google"
+import { headers } from "next/headers"
 import "./globals.css"
 import AuthSessionProvider from "@/components/providers/session-provider"
 import Navigation from "@/components/layout/nav"
+import Footer from "@/components/layout/footer"
 import StoreDebug from "@/components/debug/store-debug"
 import { Toaster } from "sonner"
 
@@ -24,12 +26,17 @@ export const metadata = {
 }
 
 export default function RootLayout({ children }) {
+  const headersList = headers()
+  const isAdminPage = headersList.get("x-is-admin-page") === "true"
+  const isAuthPage = headersList.get("x-is-auth-page") === "true"
+
   return (
     <html lang="en" className={`${inter.variable} ${poppins.variable}`}>
       <body className={inter.className}>
         <AuthSessionProvider>
-          <Navigation />
+          {!isAdminPage && !isAuthPage && <Navigation />}
           <main>{children}</main>
+          {!isAdminPage && !isAuthPage && <Footer />}
           {process.env.NODE_ENV !== "production" && <StoreDebug />}
           <Toaster position="bottom-right" />
         </AuthSessionProvider>

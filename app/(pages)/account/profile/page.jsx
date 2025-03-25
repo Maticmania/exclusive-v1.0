@@ -1,6 +1,7 @@
 import AccountSidebar from "@/components/profile/account-sidebar"
 import ProfileForm from "@/components/profile/profile-form"
 import PasswordForm from "@/components/profile/password-form"
+import { Breadcrumb } from "@/components/ui/breadcrumb"
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth"
 import { redirect } from "next/navigation"
@@ -17,8 +18,16 @@ export default async function ProfilePage() {
     redirect("/auth/signin?callbackUrl=/account/profile")
   }
 
+  // Breadcrumb items
+  const breadcrumbItems = [{ label: "Account", href: "/account/profile" }, { label: "Profile" }]
+
   return (
     <div className="container max-w-screen-xl mx-auto px-4 py-10">
+      {/* Breadcrumbs */}
+      <div className="mb-6">
+        <Breadcrumb items={breadcrumbItems} />
+      </div>
+
       <h1 className="text-2xl font-bold mb-6 md:hidden">My Account</h1>
 
       <div className="flex flex-col md:flex-row gap-8">

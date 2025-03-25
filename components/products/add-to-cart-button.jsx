@@ -1,18 +1,26 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { BsCart3, BsPlus, BsDash } from "react-icons/bs"
+import { BsCart3, BsCheck } from "react-icons/bs"
 import { useCartStore } from "@/store/auth-store"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 
-export default function AddToCartButton({ product }) {
+export default function AddToCartButton({ product, buttonText = "Add to Cart" }) {
   const [quantity, setQuantity] = useState(1)
   const [isAdding, setIsAdding] = useState(false)
-  const { addItem } = useCartStore()
+  const [isAdded, setIsAdded] = useState(false)
+  const { addItem, items } = useCartStore()
   const router = useRouter()
+
+  // Check if product is already in cart
+  useEffect(() => {
+    const productInCart = items.find((item) => item.product._id === product._id)
+    if (productInCart) {
+      setIsAdded(true)
+    }
+  }, [items, product._id])
 
   const handleQuantityChange = (e) => {
     const value = Number.parseInt(e.target.value)
@@ -57,53 +65,66 @@ export default function AddToCartButton({ product }) {
         }),
       })
 
-      toast.success("Added to cart", {
-        description: `${product.name} has been added to your cart. action`,
-        action: {
-          label: "View Cart",
-          onClick: () => router.push("/cart"),
-        },
-      })
+      setIsAdded(true)
+
+      // If button text is "Buy Now", redirect to cart
+      if (buttonText === "Buy Now") {
+        router.push("/cart")
+      } else {
+        toast.success("Added to cart", {
+          description: `${product.name} has been added to your cart.`,
+          action: {
+            label: "View Cart",
+            onClick: () => router.push("/cart"),
+          },
+        })
+      }
     } catch (error) {
       console.error("Error adding to cart:", error)
       toast.error("Failed to add item to cart")
     } finally {
       setIsAdding(false)
+
+      // Reset isAdded state after 2 seconds if not redirecting
+      if (buttonText !== "Buy Now") {
+        setTimeout(() => {
+          setIsAdded(false)
+        }, 2000)
+      }
     }
   }
 
-  return (
-    <div className="flex items-center gap-2">
-      <div className="flex items-center border rounded-md">
-        <button
-          onClick={decreaseQuantity}
-          disabled={quantity <= 1}
-          className="px-2 py-1 text-gray-500 hover:text-gray-700"
-        >
-          <BsDash />
-        </button>
-        <Input
-          type="number"
-          value={quantity}
-          onChange={handleQuantityChange}
-          min={1}
-          max={product.stock}
-          className="w-16 text-center border-0 focus-visible:ring-0"
-        />
-        <button
-          onClick={increaseQuantity}
-          disabled={quantity >= product.stock}
-          className="px-2 py-1 text-gray-500 hover:text-gray-700"
-        >
-          <BsPlus />
-        </button>
-      </div>
-
-      <Button onClick={handleAddToCart} disabled={isAdding || product.stock < 1} className="flex items-center gap-2">
-        <BsCart3 className="h-4 w-4" />
-        <span>{isAdding ? "Adding..." : "Add to Cart"}</span>
+  // If on product detail page with quantity selector
+  if (buttonText === "Buy Now") {
+    return (
+      <Button onClick={handleAddToCart} disabled={isAdding || product.stock < 1} className="w-full">
+        {isAdding ? "Adding..." : buttonText}
       </Button>
-    </div>
+    )
+  }
+
+  // For product cards
+  return (
+    <Button
+      onClick={handleAddToCart}
+      disabled={isAdding || product.stock < 1 || isAdded}
+      className="w-full flex items-center justify-center gap-2"
+      variant={isAdded ? "outline" : "default"}
+    >
+      {isAdding ? (
+        "Adding..."
+      ) : isAdded ? (
+        <>
+          <BsCheck className="h-5 w-5" />
+          <span>Added</span>
+        </>
+      ) : (
+        <>
+          <BsCart3 className="h-4 w-4" />
+          <span>{buttonText}</span>
+        </>
+      )}
+    </Button>
   )
 }
 
