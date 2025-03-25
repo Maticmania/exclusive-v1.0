@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth/next"
-import { authOptions } from "@/app/api/auth/[...nextauth]/route"
+import { authOptions } from "@/lib/auth"
 import { hasRole } from "@/lib/auth-middleware"
-import connectToDatabase from "@/lib/mongodb"
+import {connectToDatabase} from "@/lib/mongodb"
 import Product from "@/models/product"
 
 // Update a review (owner or admin only)

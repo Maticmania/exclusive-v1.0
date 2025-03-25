@@ -16,10 +16,9 @@ async function getProducts() {
 
   const products = await Product.find().sort({ createdAt: -1 }).lean()
 
-  // Convert MongoDB _id to string and properly serialize all objects
   return products.map((product) => ({
     ...product,
-    _id: product._id.toString(),
+    _id: product._id.toString(), // Ensure _id is a string
     category: product.category
       ? {
           _id: product.category._id.toString(),
@@ -32,6 +31,19 @@ async function getProducts() {
           name: product.brand.name || "Unknown Brand",
         }
       : null,
+    variants: product.variants?.map((variant) => ({
+      ...variant,
+      _id: variant._id.toString(),
+    })) || [],
+    dimensions: product.dimensions
+      ? {
+          length: product.dimensions.length,
+          width: product.dimensions.width,
+          height: product.dimensions.height,
+          unit: product.dimensions.unit,
+        }
+      : null,
+    isOnFlashSale: Boolean(product.isOnFlashSale),
     createdAt: product.createdAt.toISOString(),
     updatedAt: product.updatedAt.toISOString(),
   }))

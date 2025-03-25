@@ -25,8 +25,8 @@ export const metadata = {
   description: "Your exclusive e-commerce platform",
 }
 
-export default function RootLayout({ children }) {
-  const headersList = headers()
+export default async function RootLayout({ children }) {
+  const headersList = await headers() // Await here
   const isAdminPage = headersList.get("x-is-admin-page") === "true"
   const isAuthPage = headersList.get("x-is-auth-page") === "true"
 

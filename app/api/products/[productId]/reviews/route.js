@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth/next"
-import { authOptions } from "@/app/api/auth/[...nextauth]/route"
-import connectToDatabase from "@/lib/mongodb"
+
+import {connectToDatabase} from "@/lib/mongodb"
 import Product from "@/models/product"
+import { authOptions } from "@/lib/auth"
 
 // Get all reviews for a product
 export async function GET(req, { params }) {
