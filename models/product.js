@@ -1,56 +1,91 @@
 import mongoose from "mongoose"
-import { slugify } from "@/lib/utils"
 
-// Define the schema for product variants
+// Review schema as a subdocument
+const reviewSchema = new mongoose.Schema(
+  {
+    rating: {
+      type: Number,
+      required: true,
+      min: 1,
+      max: 5,
+    },
+    comment: {
+      type: String,
+      required: true,
+    },
+    reviewerName: {
+      type: String,
+      required: true,
+    },
+    reviewerEmail: {
+      type: String,
+      required: true,
+    },
+    date: {
+      type: Date,
+      default: Date.now,
+    },
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+  },
+  { timestamps: true },
+)
+
+// Variant option schema (for colors, sizes, etc.)
 const variantOptionSchema = new mongoose.Schema({
   name: {
     type: String,
     required: true,
-    trim: true,
   },
   value: {
     type: String,
     required: true,
-    trim: true,
   },
   additionalPrice: {
     type: Number,
     default: 0,
   },
+  stock: {
+    type: Number,
+    default: 0,
+    min: 0,
+  },
+  sku: {
+    type: String,
+  },
+  image: {
+    type: String,
+  },
 })
 
-const variantSchema = new mongoose.Schema({
+// Variant type schema (color, size, etc.)
+const variantTypeSchema = new mongoose.Schema({
   name: {
     type: String,
     required: true,
-    trim: true,
   },
   options: [variantOptionSchema],
 })
 
-// Define the schema for flash sale data
-const flashSaleSchema = new mongoose.Schema({
-  isOnFlashSale: {
-    type: Boolean,
-    default: false,
-  },
-  discountPercentage: {
+// Dimensions schema
+const dimensionsSchema = new mongoose.Schema({
+  length: {
     type: Number,
-    min: 1,
-    max: 99,
   },
-  flashSaleStartDate: {
-    type: Date,
+  width: {
+    type: Number,
   },
-  flashSaleEndDate: {
-    type: Date,
+  height: {
+    type: Number,
   },
-  flashSaleId: {
+  unit: {
     type: String,
+    default: "cm",
   },
 })
 
-// Define the schema for products
 const productSchema = new mongoose.Schema(
   {
     name: {
@@ -60,6 +95,8 @@ const productSchema = new mongoose.Schema(
     },
     slug: {
       type: String,
+      required: [true, "Product slug is required"],
+      trim: true,
       unique: true,
       lowercase: true,
     },
@@ -76,13 +113,26 @@ const productSchema = new mongoose.Schema(
       type: Number,
       min: [0, "Compare at price cannot be negative"],
     },
-    images: {
-      type: [String],
-      default: [],
+    discountPercentage: {
+      type: Number,
+      min: 0,
+      max: 100,
+      default: function () {
+        if (this.compareAtPrice && this.price) {
+          return Math.round(((this.compareAtPrice - this.price) / this.compareAtPrice) * 100)
+        }
+        return 0
+      },
     },
+    images: [
+      {
+        type: String,
+      },
+    ],
     category: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Category",
+      required: [true, "Product category is required"],
     },
     brand: {
       type: mongoose.Schema.Types.ObjectId,
@@ -90,68 +140,72 @@ const productSchema = new mongoose.Schema(
     },
     stock: {
       type: Number,
-      required: [true, "Product stock is required"],
+      required: [true, "Stock quantity is required"],
       min: [0, "Stock cannot be negative"],
-      default: 0,
-    },
-    sku: {
-      type: String,
-      trim: true,
-    },
-    isPublished: {
-      type: Boolean,
-      default: false,
     },
     featured: {
       type: Boolean,
       default: false,
     },
-    variants: [variantSchema],
-    flashSale: {
-      type: flashSaleSchema,
-      default: null,
+    isPublished: {
+      type: Boolean,
+      default: true,
     },
-    rating: {
-      type: Number,
-      default: 0,
-      min: 0,
-      max: 5,
-    },
-    reviewCount: {
-      type: Number,
-      default: 0,
-      min: 0,
-    },
-    tags: {
-      type: [String],
-      default: [],
+    // New fields
+    tags: [
+      {
+        type: String,
+        trim: true,
+      },
+    ],
+    sku: {
+      type: String,
+      trim: true,
     },
     weight: {
       type: Number,
       min: 0,
     },
-    dimensions: {
-      length: { type: Number, min: 0 },
-      width: { type: Number, min: 0 },
-      height: { type: Number, min: 0 },
-    },
-    shippingClass: {
+    weightUnit: {
       type: String,
-      enum: ["standard", "express", "free", "none"],
-      default: "standard",
+      default: "kg",
+      enum: ["kg", "g", "lb", "oz"],
     },
-    taxClass: {
+    dimensions: dimensionsSchema,
+    variants: [variantTypeSchema],
+    warrantyInformation: {
       type: String,
-      enum: ["standard", "reduced", "zero"],
-      default: "standard",
     },
-    metaTitle: {
+    shippingInformation: {
       type: String,
-      trim: true,
     },
-    metaDescription: {
+    availabilityStatus: {
       type: String,
-      trim: true,
+      enum: ["In Stock", "Low Stock", "Out of Stock", "Backorder", "Discontinued"],
+      default: function () {
+        if (this.stock <= 0) return "Out of Stock"
+        if (this.stock < 5) return "Low Stock"
+        return "In Stock"
+      },
+    },
+    reviews: [reviewSchema],
+    rating: {
+      type: Number,
+      min: 0,
+      max: 5,
+      default: 0,
+    },
+    reviewCount: {
+      type: Number,
+      default: 0,
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now,
+    },
+    updatedAt: {
+      type: Date,
+      default: Date.now,
     },
   },
   {
@@ -161,72 +215,28 @@ const productSchema = new mongoose.Schema(
   },
 )
 
-// Create a slug from the name before saving
+// Calculate average rating when reviews are added or modified
 productSchema.pre("save", function (next) {
-  if (!this.slug || this.isModified("name")) {
-    this.slug = slugify(this.name)
+  if (this.reviews && this.reviews.length > 0) {
+    const totalRating = this.reviews.reduce((sum, review) => sum + review.rating, 0)
+    this.rating = Number.parseFloat((totalRating / this.reviews.length).toFixed(2))
+    this.reviewCount = this.reviews.length
+  } else {
+    this.rating = 0
+    this.reviewCount = 0
   }
+
+  // Update availability status based on stock
+  if (this.stock <= 0) {
+    this.availabilityStatus = "Out of Stock"
+  } else if (this.stock < 5) {
+    this.availabilityStatus = "Low Stock"
+  } else {
+    this.availabilityStatus = "In Stock"
+  }
+
   next()
 })
-
-// Virtual for current price (considering flash sales)
-productSchema.virtual("currentPrice").get(function () {
-  if (
-    this.flashSale &&
-    this.flashSale.isOnFlashSale &&
-    new Date(this.flashSale.flashSaleStartDate) <= new Date() &&
-    new Date(this.flashSale.flashSaleEndDate) >= new Date()
-  ) {
-    return Number.parseFloat((this.price * (1 - this.flashSale.discountPercentage / 100)).toFixed(2))
-  }
-  return this.price
-})
-
-// Method to convert the document to a plain object with string IDs
-productSchema.methods.toJSON = function () {
-  const product = this.toObject({ virtuals: true })
-
-  // Convert ObjectId to string
-  if (product._id) {
-    product._id = product._id.toString()
-  }
-
-  // Convert category ObjectId to string if it exists
-  if (product.category && typeof product.category === "object" && product.category._id) {
-    product.category._id = product.category._id.toString()
-  } else if (product.category) {
-    product.category = product.category.toString()
-  }
-
-  // Convert brand ObjectId to string if it exists
-  if (product.brand && typeof product.brand === "object" && product.brand._id) {
-    product.brand._id = product.brand._id.toString()
-  } else if (product.brand) {
-    product.brand = product.brand.toString()
-  }
-
-  // Handle dates
-  if (product.createdAt) {
-    product.createdAt = product.createdAt.toISOString()
-  }
-
-  if (product.updatedAt) {
-    product.updatedAt = product.updatedAt.toISOString()
-  }
-
-  // Handle flash sale dates
-  if (product.flashSale) {
-    if (product.flashSale.flashSaleStartDate) {
-      product.flashSale.flashSaleStartDate = product.flashSale.flashSaleStartDate.toISOString()
-    }
-
-    if (product.flashSale.flashSaleEndDate) {
-      product.flashSale.flashSaleEndDate = product.flashSale.flashSaleEndDate.toISOString()
-    }
-  }
-
-  return product
-}
 
 const Product = mongoose.models.Product || mongoose.model("Product", productSchema)
 
