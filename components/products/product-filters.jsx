@@ -1,93 +1,94 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
-import { Slider } from "@/components/ui/slider"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Label } from "@/components/ui/label"
-import { Button } from "@/components/ui/button"
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
+import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Slider } from "@/components/ui/slider";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
-// Sample categories and brands - in a real app, these would come from the database
-const categories = ["Electronics", "Clothing", "Home & Kitchen", "Beauty", "Sports", "Books"]
-
-const brands = ["Apple", "Samsung", "Nike", "Adidas", "Sony", "LG", "Dell", "HP"]
+// Fetch categories and brands from API (mocked for now)
+const categories = ["Electronics", "Clothing", "Home & Kitchen", "Beauty", "Sports", "Books"];
+const brands = ["Apple", "Samsung", "Nike", "Adidas", "Sony", "LG", "Dell", "HP"];
 
 export default function ProductFilters() {
-  const router = useRouter()
-  const searchParams = useSearchParams()
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
-  // Get current filter values from URL
-  const currentCategory = searchParams.get("category")
-  const currentBrands = searchParams.get("brands")?.split(",") || []
-  const minPrice = Number(searchParams.get("minPrice") || 0)
-  const maxPrice = Number(searchParams.get("maxPrice") || 1000)
+  // Extract current filter values from URL
+  const currentCategory = searchParams.get("category");
+  const currentBrands = searchParams.get("brands")?.split(",") || [];
+  const minPrice = Number(searchParams.get("minPrice") || 0);
+  const maxPrice = Number(searchParams.get("maxPrice") || 1000);
 
-  // Local state for filters
-  const [priceRange, setPriceRange] = useState([minPrice, maxPrice])
-  const [selectedCategories, setSelectedCategories] = useState(currentCategory ? [currentCategory] : [])
-  const [selectedBrands, setSelectedBrands] = useState(currentBrands)
+  // State for filters
+  const [priceRange, setPriceRange] = useState([minPrice, maxPrice]);
+  const [selectedCategory, setSelectedCategory] = useState(currentCategory || "");
+  const [selectedBrands, setSelectedBrands] = useState(currentBrands);
 
-  // Handle category selection
+  // Sync state with URL params when they change
+  useEffect(() => {
+    setPriceRange([minPrice, maxPrice]);
+    setSelectedCategory(currentCategory || "");
+    setSelectedBrands(currentBrands);
+  }, [searchParams]);
+
+  // Handle category selection (single category at a time)
   const handleCategoryChange = (category) => {
-    if (selectedCategories.includes(category)) {
-      setSelectedCategories(selectedCategories.filter((c) => c !== category))
-    } else {
-      setSelectedCategories([category]) // Only allow one category for simplicity
-    }
-  }
+    setSelectedCategory(category === selectedCategory ? "" : category);
+  };
 
-  // Handle brand selection
+  // Handle brand selection (multiple brands allowed)
   const handleBrandChange = (brand) => {
-    if (selectedBrands.includes(brand)) {
-      setSelectedBrands(selectedBrands.filter((b) => b !== brand))
-    } else {
-      setSelectedBrands([...selectedBrands, brand])
-    }
-  }
+    setSelectedBrands((prev) =>
+      prev.includes(brand) ? prev.filter((b) => b !== brand) : [...prev, brand]
+    );
+  };
 
   // Apply filters
   const applyFilters = () => {
-    const params = new URLSearchParams()
+    const params = new URLSearchParams();
 
-    if (selectedCategories.length > 0) {
-      params.set("category", selectedCategories[0])
+    if (selectedCategory) {
+      params.set("category", selectedCategory);
     }
 
     if (selectedBrands.length > 0) {
-      params.set("brands", selectedBrands.join(","))
+      params.set("brands", selectedBrands.join(","));
     }
 
     if (priceRange[0] > 0) {
-      params.set("minPrice", priceRange[0])
+      params.set("minPrice", String(priceRange[0]));
     }
 
     if (priceRange[1] < 1000) {
-      params.set("maxPrice", priceRange[1])
+      params.set("maxPrice", String(priceRange[1]));
     }
 
-    router.push(`/products?${params.toString()}`)
-  }
+    router.push(`/products?${params.toString()}`);
+  };
 
   // Reset filters
   const resetFilters = () => {
-    setSelectedCategories([])
-    setSelectedBrands([])
-    setPriceRange([0, 1000])
-    router.push("/products")
-  }
+    setSelectedCategory("");
+    setSelectedBrands([]);
+    setPriceRange([0, 1000]);
+    router.push("/products");
+  };
 
   return (
     <div className="bg-white p-4 rounded-lg shadow-sm">
       <h2 className="text-lg font-semibold mb-4">Filters</h2>
 
-      <Accordion type="single" collapsible className="w-full">
+      <Accordion type="multiple" collapsible='true' className="w-full">
+        {/* Price Range Filter */}
         <AccordionItem value="price">
           <AccordionTrigger>Price Range</AccordionTrigger>
           <AccordionContent>
             <div className="space-y-4 py-2">
               <Slider value={priceRange} min={0} max={1000} step={10} onValueChange={setPriceRange} />
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between text-sm">
                 <span>${priceRange[0]}</span>
                 <span>${priceRange[1]}</span>
               </div>
@@ -95,6 +96,7 @@ export default function ProductFilters() {
           </AccordionContent>
         </AccordionItem>
 
+        {/* Categories Filter */}
         <AccordionItem value="categories">
           <AccordionTrigger>Categories</AccordionTrigger>
           <AccordionContent>
@@ -103,7 +105,7 @@ export default function ProductFilters() {
                 <div key={category} className="flex items-center space-x-2">
                   <Checkbox
                     id={`category-${category}`}
-                    checked={selectedCategories.includes(category)}
+                    checked={selectedCategory === category}
                     onCheckedChange={() => handleCategoryChange(category)}
                   />
                   <Label htmlFor={`category-${category}`} className="text-sm font-normal cursor-pointer">
@@ -115,6 +117,7 @@ export default function ProductFilters() {
           </AccordionContent>
         </AccordionItem>
 
+        {/* Brands Filter */}
         <AccordionItem value="brands">
           <AccordionTrigger>Brands</AccordionTrigger>
           <AccordionContent>
@@ -136,6 +139,7 @@ export default function ProductFilters() {
         </AccordionItem>
       </Accordion>
 
+      {/* Apply & Reset Buttons */}
       <div className="flex gap-2 mt-6">
         <Button onClick={applyFilters} className="flex-1">
           Apply Filters
@@ -145,6 +149,5 @@ export default function ProductFilters() {
         </Button>
       </div>
     </div>
-  )
+  );
 }
-
