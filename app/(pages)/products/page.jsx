@@ -1,20 +1,20 @@
-import { Suspense } from "react"
-import ProductList from "@/components/products/product-list"
-import ProductFilters from "@/components/products/product-filters"
-import { Breadcrumb } from "@/components/ui/breadcrumb"
-import {connectToDatabase} from "@/lib/mongodb"
-import Product from "@/models/product"
+import { Suspense } from "react";
+import ProductList from "@/components/products/product-list";
+import ProductFilters from "@/components/products/product-filters";
+import { Breadcrumb } from "@/components/ui/breadcrumb";
+import { connectToDatabase } from "@/lib/mongodb";
+import Product from "@/models/product";
 
 export const metadata = {
   title: "Products | Exclusive",
   description: "Browse our exclusive collection of products",
-}
+};
 
 // Fetch products from the database
 async function getProducts() {
-  await connectToDatabase()
+  await connectToDatabase();
 
-  const products = await Product.find().sort({ createdAt: -1 }).lean()
+  const products = (await Product.find().sort({ createdAt: -1 }).lean()) || [];
 
   return products.map((product) => ({
     ...product,
@@ -31,10 +31,11 @@ async function getProducts() {
           name: product.brand.name || "Unknown Brand",
         }
       : null,
-    variants: product.variants?.map((variant) => ({
-      ...variant,
-      _id: variant._id.toString(),
-    })) || [],
+    variants:
+      product.variants?.map((variant) => ({
+        ...variant,
+        _id: variant._id.toString(),
+      })) || [],
     dimensions: product.dimensions
       ? {
           length: product.dimensions.length,
@@ -46,14 +47,14 @@ async function getProducts() {
     isOnFlashSale: Boolean(product.isOnFlashSale),
     createdAt: product.createdAt.toISOString(),
     updatedAt: product.updatedAt.toISOString(),
-  }))
+  }));
 }
 
 export default async function ProductsPage() {
-  const products = await getProducts()
+  const products = (await getProducts()) || [];
 
   // Breadcrumb items
-  const breadcrumbItems = [{ label: "Products" }]
+  const breadcrumbItems = [{ label: "Products" }];
 
   return (
     <div className="container max-w-screen-xl mx-auto px-4 py-10">
@@ -71,13 +72,16 @@ export default async function ProductsPage() {
           </div>
 
           <div className="w-full md:w-3/4">
-            <Suspense fallback={<div>Loading products...</div>}>
-              <ProductList initialProducts={products} />
-            </Suspense>
+            {products.length > 0 ? (
+              <Suspense fallback={<div>Loading products...</div>}>
+                <ProductList initialProducts={products} />
+              </Suspense>
+            ) : (
+              <div className="text-center text-xl">No products found</div>
+            )}
           </div>
         </div>
       </div>
     </div>
-  )
+  );
 }
-

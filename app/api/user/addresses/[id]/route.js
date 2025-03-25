@@ -16,7 +16,9 @@ export async function PUT(req, { params }) {
     }
 
     const addressData = await req.json()
-    const addressId = params.id
+    const {id} = await params
+
+    const addressId = id
 
     await connectToDatabase()
 
@@ -64,8 +66,9 @@ export async function DELETE(req, { params }) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const addressId = params.id
+    const {id} = await params
 
+    const addressId = id
     await connectToDatabase()
 
     const user = await User.findById(session.user.id)

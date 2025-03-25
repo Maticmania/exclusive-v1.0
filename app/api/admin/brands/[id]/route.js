@@ -13,8 +13,8 @@ import {
 export async function GET(req, { params }) {
   try {
     await connectToDatabase();
-
-    const brand = await Brand.findById(params.id);
+    const { id } = await params;
+    const brand = await Brand.findById(id);
 
     if (!brand) {
       return NextResponse.json({ error: "Brand not found" }, { status: 404 });
@@ -49,8 +49,9 @@ export async function PUT(req, { params }) {
     }
 
     await connectToDatabase();
+    const { id } = await params;
 
-    const brand = await Brand.findById(params.id);
+    const brand = await Brand.findById(id);
 
     if (!brand) {
       return NextResponse.json({ error: "Brand not found" }, { status: 404 });
@@ -105,10 +106,12 @@ export async function DELETE(req, { params }) {
     }
 
     await connectToDatabase();
+    const {id} = await params
+
 
     // Check if brand is used in any products
     const productsUsingBrand = await Product.countDocuments({
-      brand: params.id,
+      brand: id,
     });
 
     if (productsUsingBrand > 0) {
@@ -121,7 +124,7 @@ export async function DELETE(req, { params }) {
       );
     }
 
-    const brand = await Brand.findByIdAndDelete(params.id);
+    const brand = await Brand.findByIdAndDelete(id);
 
     if (!brand) {
       return NextResponse.json({ error: "Brand not found" }, { status: 404 });

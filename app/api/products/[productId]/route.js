@@ -44,8 +44,9 @@ function serializeMongoData(data) {
 export async function GET(req, { params }) {
   try {
     await connectToDatabase()
+    const {productId} = await params
 
-    const product = await Product.findById(params.productId)
+    const product = await Product.findById(productId)
       .populate("category", "name slug")
       .populate("brand", "name slug")
       .lean()
@@ -76,8 +77,9 @@ export async function PUT(req, { params }) {
     const productData = await req.json()
 
     await connectToDatabase()
+    const {productId} = await params
 
-    const product = await Product.findById(params.productId)
+    const product = await Product.findById(productId)
 
     if (!product) {
       return NextResponse.json({ error: "Product not found" }, { status: 404 })
@@ -129,8 +131,9 @@ export async function DELETE(req, { params }) {
     }
 
     await connectToDatabase()
+    const {productId} = await params
 
-    const product = await Product.findByIdAndDelete(params.productId)
+    const product = await Product.findByIdAndDelete(productId)
 
     if (!product) {
       return NextResponse.json({ error: "Product not found" }, { status: 404 })

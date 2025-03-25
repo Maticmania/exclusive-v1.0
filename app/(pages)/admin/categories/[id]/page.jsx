@@ -34,8 +34,9 @@ export default async function EditCategoryPage({ params }) {
   if (!isAdmin) {
     redirect("/unauthorized")
   }
+  const {id} = await params
 
-  const category = await getCategory(params.id)
+  const category = await getCategory(id)
 
   if (!category) {
     notFound()

@@ -13,7 +13,8 @@ export async function PUT(req, { params }) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const paymentId = params.id
+    const {id} = await params
+    const paymentId = id
     const { password } = await req.json()
 
     if (!password) {

@@ -47,7 +47,9 @@ export default async function EditProductPage({ params }) {
     redirect("/unauthorized")
   }
 
-  const product = await getProduct(params.id)
+
+  const { id } = await params 
+  const product = await getProduct(id)
 
   if (!product) {
     notFound()

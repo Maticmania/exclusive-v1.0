@@ -14,9 +14,10 @@ export async function GET(req, { params }) {
     }
 
     await connectToDatabase()
+    const {orderId} = await params
 
     const order = await Order.findOne({
-      _id: params.orderId,
+      _id: orderId,
       user: session.user.id,
     }).populate({
       path: "items.product",
@@ -49,9 +50,10 @@ export async function PUT(req, { params }) {
     }
 
     await connectToDatabase()
+    const {orderId} = await params
 
     const order = await Order.findOne({
-      _id: params.orderId,
+      _id: orderId,
       user: session.user.id,
     })
 

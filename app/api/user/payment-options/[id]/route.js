@@ -14,7 +14,8 @@ export async function PUT(req, { params }) {
     }
 
     const { paymentData, password } = await req.json()
-    const paymentId = params.id
+    const {id} = await params
+    const paymentId = id
 
     if (!paymentData || !password) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
@@ -79,7 +80,8 @@ export async function DELETE(req, { params }) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const paymentId = params.id
+    const {id} = await params
+    const paymentId = id
     const { password } = await req.json()
 
     if (!password) {

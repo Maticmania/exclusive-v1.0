@@ -34,8 +34,9 @@ export default async function EditBrandPage({ params }) {
   if (!isAdmin) {
     redirect("/unauthorized")
   }
+  const {id} = await params
 
-  const brand = await getBrand(params.id)
+  const brand = await getBrand(id)
 
   if (!brand) {
     notFound()

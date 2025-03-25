@@ -4,7 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { connectToDatabase } from "@/lib/mongodb";
 import Wishlist from "@/models/wishlist";
 
-export async function DELETE(req, context) {
+export async function DELETE(req, params) {
   try {
     const session = await getServerSession(authOptions);
 
@@ -20,7 +20,7 @@ export async function DELETE(req, context) {
       return NextResponse.json({ error: "Wishlist not found" }, { status: 404 });
     }
 
-    const { productId } = await context.params; // Await params resolution
+    const { productId } = await params; // Await params resolution
 
     // Remove product from wishlist
     wishlist.products = wishlist.products.filter((id) => id.toString() !== productId);

@@ -25,15 +25,17 @@ export async function PUT(req, { params }) {
     }
 
     await connectToDatabase()
+    const {productId} = await params
 
-    const product = await Product.findById(params.productId)
+    const product = await Product.findById(productId)
 
     if (!product) {
       return NextResponse.json({ error: "Product not found" }, { status: 404 })
     }
+    const {reviewId} = await params
 
     // Find the review
-    const reviewIndex = product.reviews.findIndex((review) => review._id.toString() === params.reviewId)
+    const reviewIndex = product.reviews.findIndex((review) => review._id.toString() === reviewId)
 
     if (reviewIndex === -1) {
       return NextResponse.json({ error: "Review not found" }, { status: 404 })
@@ -76,15 +78,17 @@ export async function DELETE(req, { params }) {
     }
 
     await connectToDatabase()
+    const {productId} = await params
 
-    const product = await Product.findById(params.productId)
+    const product = await Product.findById(productId)
 
     if (!product) {
       return NextResponse.json({ error: "Product not found" }, { status: 404 })
     }
+    const {reviewId} = await params
 
     // Find the review
-    const reviewIndex = product.reviews.findIndex((review) => review._id.toString() === params.reviewId)
+    const reviewIndex = product.reviews.findIndex((review) => review._id.toString() === reviewId)
 
     if (reviewIndex === -1) {
       return NextResponse.json({ error: "Review not found" }, { status: 404 })

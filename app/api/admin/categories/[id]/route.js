@@ -39,8 +39,8 @@ export async function PUT(req, { params }) {
     }
 
     await connectToDatabase()
-
-    const category = await Category.findById(params.id)
+    const {id} = await params
+    const category = await Category.findById(id)
     if (!category) {
       return NextResponse.json({ error: "Category not found" }, { status: 404 })
     }
@@ -80,8 +80,9 @@ export async function DELETE(req, { params }) {
     }
 
     await connectToDatabase()
+    const {id} = await params
 
-    const category = await Category.findById(params.id)
+    const category = await Category.findById(id)
     if (!category) {
       return NextResponse.json({ error: "Category not found" }, { status: 404 })
     }

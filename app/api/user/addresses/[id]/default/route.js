@@ -12,8 +12,9 @@ export async function PUT(req, { params }) {
     if (!session || !session.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
+    const {id} = await params
 
-    const addressId = params.id
+    const addressId = id
 
     await connectToDatabase()
 

@@ -18,8 +18,9 @@ export async function GET(req, { params }) {
     }
 
     await connectToDatabase()
+    const {id} = await params
 
-    const product = await Product.findById(params.id).populate("category", "name").populate("brand", "name")
+    const product = await Product.findById(id).populate("category", "name").populate("brand", "name")
 
     if (!product) {
       return NextResponse.json({ error: "Product not found" }, { status: 404 })
@@ -51,8 +52,9 @@ export async function PUT(req, { params }) {
     }
 
     await connectToDatabase()
+    const {id} = await params
 
-    const product = await Product.findById(params.id)
+    const product = await Product.findById(id)
     if (!product) {
       return NextResponse.json({ error: "Product not found" }, { status: 404 })
     }
@@ -74,7 +76,7 @@ export async function PUT(req, { params }) {
     // Update slug if name changes
     if (productData.name !== product.name) {
       const slug = slugify(productData.name)
-      const existingProduct = await Product.findOne({ slug, _id: { $ne: params.id } })
+      const existingProduct = await Product.findOne({ slug, _id: { $ne: id } })
 
       productData.slug = existingProduct
         ? `${slug}-${Math.random().toString(36).substring(2, 7)}`
@@ -122,8 +124,9 @@ export async function DELETE(req, { params }) {
     }
 
     await connectToDatabase()
+    const {id} = await params
 
-    const product = await Product.findById(params.id)
+    const product = await Product.findById(id)
     if (!product) {
       return NextResponse.json({ error: "Product not found" }, { status: 404 })
     }
@@ -133,7 +136,7 @@ export async function DELETE(req, { params }) {
       await Promise.all(product.images.map((img) => deleteImageFromCloudinary(img)))
     }
 
-    await Product.findByIdAndDelete(params.id)
+    await Product.findByIdAndDelete(id)
 
     return NextResponse.json({ message: "Product deleted successfully" })
   } catch (error) {
