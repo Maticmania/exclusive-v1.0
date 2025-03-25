@@ -14,39 +14,45 @@ export const metadata = {
 async function getProducts() {
   await connectToDatabase();
 
-  const products = (await Product.find().sort({ createdAt: -1 }).lean()) || [];
+  const products = await Product.find().sort({ createdAt: -1 }).lean();
+
+  if (!Array.isArray(products) || products.length === 0) {
+    return []; // Ensure it always returns an array
+  }
 
   return products.map((product) => ({
     ...product,
-    _id: product._id.toString(), // Ensure _id is a string
+    _id: product._id?.toString() || "", // Ensure _id is a string
     category: product.category
       ? {
-          _id: product.category._id.toString(),
+          _id: product.category._id?.toString() || "",
           name: product.category.name || "Unknown Category",
         }
-      : null,
+      : { _id: "", name: "Unknown Category" }, // Default category object
     brand: product.brand
       ? {
-          _id: product.brand._id.toString(),
+          _id: product.brand._id?.toString() || "",
           name: product.brand.name || "Unknown Brand",
         }
-      : null,
+      : { _id: "", name: "Unknown Brand" }, // Default brand object
     variants:
-      product.variants?.map((variant) => ({
-        ...variant,
-        _id: variant._id.toString(),
-      })) || [],
+      Array.isArray(product.variants) && product.variants.length > 0
+        ? product.variants.map((variant) => ({
+            ...variant,
+            _id: variant._id?.toString() || "",
+          }))
+        : [],
     dimensions: product.dimensions
       ? {
-          length: product.dimensions.length,
-          width: product.dimensions.width,
-          height: product.dimensions.height,
-          unit: product.dimensions.unit,
+          length: product.dimensions.length || 0,
+          width: product.dimensions.width || 0,
+          height: product.dimensions.height || 0,
+          unit: product.dimensions.unit || "cm",
         }
       : null,
     isOnFlashSale: Boolean(product.isOnFlashSale),
-    createdAt: product.createdAt.toISOString(),
-    updatedAt: product.updatedAt.toISOString(),
+    createdAt: product.createdAt?.toISOString() || new Date().toISOString(),
+    updatedAt: product.updatedAt?.toISOString() || new Date().toISOString(),
   }));
 }
 
@@ -72,13 +78,9 @@ export default async function ProductsPage() {
           </div>
 
           <div className="w-full md:w-3/4">
-            {products.length > 0 ? (
               <Suspense fallback={<div>Loading products...</div>}>
                 <ProductList initialProducts={products} />
               </Suspense>
-            ) : (
-              <div className="text-center text-xl">No products found</div>
-            )}
           </div>
         </div>
       </div>
