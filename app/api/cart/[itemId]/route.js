@@ -8,6 +8,7 @@ import Product from "@/models/product"
 export async function PUT(req, { params }) {
   try {
     const session = await getServerSession(authOptions)
+    const { itemId } = await params
 
     if (!session || !session.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
@@ -28,7 +29,7 @@ export async function PUT(req, { params }) {
     }
 
     // Find item in cart
-    const itemIndex = cart.items.findIndex((item) => item._id.toString() === params.itemId)
+    const itemIndex = cart.items.findIndex((item) => item._id.toString() === itemId)
 
     if (itemIndex === -1) {
       return NextResponse.json({ error: "Item not found in cart" }, { status: 404 })
@@ -62,6 +63,7 @@ export async function PUT(req, { params }) {
 export async function DELETE(req, { params }) {
   try {
     const session = await getServerSession(authOptions)
+    const { itemId } = await params
 
     if (!session || !session.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
@@ -76,7 +78,7 @@ export async function DELETE(req, { params }) {
     }
 
     // Remove item from cart
-    cart.items = cart.items.filter((item) => item._id.toString() !== params.itemId)
+    cart.items = cart.items.filter((item) => item._id.toString() !== itemId)
 
     await cart.save()
 

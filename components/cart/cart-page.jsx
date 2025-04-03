@@ -130,15 +130,7 @@ export default function CartPage() {
   const finalTotal = subtotal + shipping
 
   return (
-    <div className="w-full px-[5%] mb-20 font-inter grid gap-10">
-      <div className="flex items-center gap-2 pt-10">
-        <Link href="/" className="text-sm text-gray-500 hover:text-gray-700">
-          Home
-        </Link>
-        <span className="text-sm text-gray-500">/</span>
-        <span className="text-sm">Cart</span>
-      </div>
-
+    <div className="w-full mb-20 font-inter grid gap-10">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <div className="md:col-span-2 lg:col-span-3">
           <Card className="w-full py-2 px-6 hidden md:inline-flex">
