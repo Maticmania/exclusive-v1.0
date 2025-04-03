@@ -7,6 +7,7 @@ import { Heart, Eye } from "lucide-react"
 import { useCartStore, useWishlistStore, useAuthStore } from "@/store/auth-store"
 import { formatCurrency } from "@/lib/utils"
 import { toast } from "sonner"
+import AddToCartButton from "./add-to-cart-button"
 
 export default function ProductCard({ product }) {
   const [isHovering, setIsHovering] = useState(false)
@@ -98,8 +99,7 @@ export default function ProductCard({ product }) {
     } finally {
       setIsTogglingWishlist(false)
     }
-  }
-
+  } 
   return (
     <div
       className="group relative  rounded-lg overflow-hidden hover:shadow-md transition-shadow bg-white"
@@ -114,7 +114,7 @@ export default function ProductCard({ product }) {
       )}
 
       <div className="relative h-48 w-full overflow-hidden">
-        <Link href={`/products/${product._id}`}>
+        <Link href={`/products/${product.slug}`}>
           <Image
             src={product.images?.[0] || "/placeholder.svg?height=192&width=256"}
             alt={product.name}
@@ -135,7 +135,7 @@ export default function ProductCard({ product }) {
           </button>
 
           <Link
-            href={`/products/${product._id}`}
+            href={`/products/${product.slug}`}
             className="p-1.5 rounded-full bg-white shadow-sm hover:bg-gray-100 transition-colors"
           >
             <Eye className="h-4 w-4 text-gray-600" />
@@ -144,7 +144,7 @@ export default function ProductCard({ product }) {
       </div>
 
       <div className="py-4">
-        <Link href={`/products/${product._id}`}>
+        <Link href={`/products/${product.slug}`}>
           <h3 className="font-medium text-sm mb-1 line-clamp-1">{product.name}</h3>
         </Link>
 
@@ -178,13 +178,14 @@ export default function ProductCard({ product }) {
             isHovering ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
           }`}
         >
-          <button
+          <AddToCartButton product={product}  className={"w-full py-2 bg-black text-white text-sm font-medium rounded hover:bg-gray-800 transition-colors disabled:bg-gray-400"} />
+          {/* <button
             onClick={handleAddToCart}
             disabled={isAddingToCart || product.stock <= 0}
             className="w-full py-2 bg-black text-white text-sm font-medium rounded hover:bg-gray-800 transition-colors disabled:bg-gray-400"
           >
             {isAddingToCart ? "Adding..." : product.stock <= 0 ? "Out of Stock" : "Add To Cart"}
-          </button>
+          </button> */}
         </div>
       </div>
     </div>

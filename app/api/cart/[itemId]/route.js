@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth"
 import {connectToDatabase} from "@/lib/mongodb"
 import Cart from "@/models/cart"
+import Product from "@/models/product"
 
 export async function PUT(req, { params }) {
   try {
@@ -25,11 +26,9 @@ export async function PUT(req, { params }) {
     if (!cart) {
       return NextResponse.json({ error: "Cart not found" }, { status: 404 })
     }
-    const {itemId} = await params
-
 
     // Find item in cart
-    const itemIndex = cart.items.findIndex((item) => item._id.toString() === itemId)
+    const itemIndex = cart.items.findIndex((item) => item._id.toString() === params.itemId)
 
     if (itemIndex === -1) {
       return NextResponse.json({ error: "Item not found in cart" }, { status: 404 })
@@ -40,9 +39,19 @@ export async function PUT(req, { params }) {
 
     await cart.save()
 
+    // Populate product details for response
+    await cart.populate({
+      path: "items.product",
+      model: Product,
+      select: "name price images stock variants",
+    })
+
+    // Serialize the cart
+    const serializedCart = cart.toJSON()
+
     return NextResponse.json({
       message: "Cart updated",
-      cart,
+      cart: serializedCart,
     })
   } catch (error) {
     console.error("Update cart error:", error)
@@ -66,16 +75,24 @@ export async function DELETE(req, { params }) {
       return NextResponse.json({ error: "Cart not found" }, { status: 404 })
     }
 
-    const {itemId} = await params
-
     // Remove item from cart
-    cart.items = cart.items.filter((item) => item._id.toString() !== itemId)
+    cart.items = cart.items.filter((item) => item._id.toString() !== params.itemId)
 
     await cart.save()
 
+    // Populate product details for response
+    await cart.populate({
+      path: "items.product",
+      model: Product,
+      select: "name price images stock variants",
+    })
+
+    // Serialize the cart
+    const serializedCart = cart
+
     return NextResponse.json({
       message: "Item removed from cart",
-      cart,
+      cart: serializedCart,
     })
   } catch (error) {
     console.error("Remove from cart error:", error)

@@ -1,29 +1,28 @@
 import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth/next"
-
+import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import {connectToDatabase} from "@/lib/mongodb"
 import Product from "@/models/product"
-import { authOptions } from "@/lib/auth"
 
 // Get all reviews for a product
 export async function GET(req, { params }) {
   try {
     await connectToDatabase()
 
-    const product = await Product.findById(params.productId)
+    const product = await Product.findOne({ slug: params.slug }).select("reviews").lean()
 
     if (!product) {
       return NextResponse.json({ error: "Product not found" }, { status: 404 })
     }
 
-    return NextResponse.json(product.reviews)
+    return NextResponse.json(product.reviews || [])
   } catch (error) {
     console.error("Error fetching reviews:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
 
-// Add a review to a product (authenticated users only)
+// Add a review to a product
 export async function POST(req, { params }) {
   try {
     const session = await getServerSession(authOptions)
@@ -44,39 +43,35 @@ export async function POST(req, { params }) {
 
     await connectToDatabase()
 
-    const product = await Product.findById(params.productId)
+    const product = await Product.findOne({ slug: params.slug })
 
     if (!product) {
       return NextResponse.json({ error: "Product not found" }, { status: 404 })
     }
 
     // Check if user has already reviewed this product
-    const existingReview = product.reviews.find((review) => review.user && review.user.toString() === session.user.id)
+    const existingReview = product.reviews.find((review) => review.user.toString() === session.user.id)
 
     if (existingReview) {
       return NextResponse.json({ error: "You have already reviewed this product" }, { status: 400 })
     }
 
-    // Add new review
-    const newReview = {
+    // Add the review
+    product.reviews.push({
+      user: session.user.id,
       rating,
       comment,
-      reviewerName: session.user.name,
-      reviewerEmail: session.user.email,
-      user: session.user.id,
-      date: new Date(),
-    }
+    })
 
-    product.reviews.push(newReview)
+    // Update product rating
+    product.rating = product.reviews.reduce((sum, review) => sum + review.rating, 0) / product.reviews.length
+
     await product.save()
 
-    return NextResponse.json(
-      {
-        message: "Review added successfully",
-        review: newReview,
-      },
-      { status: 201 },
-    )
+    return NextResponse.json({
+      message: "Review added successfully",
+      review: product.reviews[product.reviews.length - 1],
+    })
   } catch (error) {
     console.error("Error adding review:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })

@@ -1,47 +1,54 @@
 "use client"
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
+import { useState, useEffect } from "react"
 import { Heart } from "lucide-react"
 import { useWishlistStore, useAuthStore } from "@/store/auth-store"
 import { toast } from "sonner"
-import { useRouter } from "next/navigation"
 
-export default function AddToWishlistButton({ productId }) {
-  const [isAdding, setIsAdding] = useState(false)
+export default function AddToWishlistButton({ product, className = "" }) {
+  const [isLoading, setIsLoading] = useState(false)
   const { isInWishlist, addProduct, removeProduct } = useWishlistStore()
   const { isAuthenticated } = useAuthStore()
-  const router = useRouter()
+  const [isWishlisted, setIsWishlisted] = useState(false)
 
-  const isWishlisted = isInWishlist(productId)
+  useEffect(() => {
+    if (product && product._id) {
+      setIsWishlisted(isInWishlist(product._id))
+    }
+  }, [product, isInWishlist])
 
   const handleToggleWishlist = async () => {
     if (!isAuthenticated) {
-      toast.error("Please sign in to add items to your wishlist", {
-        action: {
-          label: "Sign In",
-          onClick: () => router.push(`/auth/signin?callbackUrl=${encodeURIComponent(window.location.pathname)}`),
-        },
+      toast.error("Sign in required", {
+        description: "Please sign in to add items to your wishlist",
       })
       return
     }
 
-    setIsAdding(true)
+    if (!product) {
+      console.log(product);
+      
+
+      toast.error("Invalid product")
+      return
+    }
+
+    setIsLoading(true)
 
     try {
       if (isWishlisted) {
         // Remove from local store first
-        removeProduct(productId)
+        removeProduct(product._id)
 
         // Then sync with server
-        await fetch(`/api/wishlist/${productId}`, {
+        await fetch(`/api/wishlist/${product._id}`, {
           method: "DELETE",
         })
 
         toast.success("Removed from wishlist")
       } else {
         // Add to local store first
-        addProduct({ _id: productId })
+        addProduct(product)
 
         // Then sync with server
         await fetch("/api/wishlist", {
@@ -50,35 +57,35 @@ export default function AddToWishlistButton({ productId }) {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            productId,
+            productId: product._id,
           }),
         })
 
-        toast.success("Added to wishlist", {
-          action: {
-            label: "View Wishlist",
-            onClick: () => router.push("/account/wishlist"),
-          },
-        })
+        toast.success("Added to wishlist")
       }
+
+      setIsWishlisted(!isWishlisted)
     } catch (error) {
       console.error("Error updating wishlist:", error)
       toast.error("Failed to update wishlist")
     } finally {
-      setIsAdding(false)
+      setIsLoading(false)
     }
   }
 
   return (
-    <Button
-      variant="outline"
-      size="icon"
+    <button
       onClick={handleToggleWishlist}
-      disabled={isAdding}
-      className={isWishlisted ? "text-red-500 border-red-200" : ""}
+      disabled={isLoading}
+      className={`p-2 rounded-lg border hover:bg-gray-100 transition-colors ${className}`}
+      aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
     >
-      <Heart className={`h-4 w-4 ${isWishlisted ? "fill-red-500" : ""}`} />
-    </Button>
+      <Heart
+        className={`h-5 w-5 ${isWishlisted ? "fill-red-500 text-red-500" : "text-gray-600"} ${
+          isLoading ? "opacity-50" : ""
+        }`}
+      />
+    </button>
   )
 }
 

@@ -1,39 +1,47 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import ProductCard from "./product-card"
-import { useWishlistStore, useCartStore } from "@/store/auth-store"
+import { useState, useEffect, useCallback } from "react";
+import ProductCard from "./product-card";
+import { useWishlistStore, useCartStore } from "@/store/auth-store";
 
-export default function ProductList({ initialProducts = [] }) {
-  const [products, setProducts] = useState(initialProducts)
-  const [loading, setLoading] = useState(initialProducts.length === 0)
-  const { syncWithServer: syncWishlist } = useWishlistStore()
-  const { syncWithServer: syncCart } = useCartStore()
+export default function ProductList() {
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const { syncWithServer: syncWishlist } = useWishlistStore();
+  const { syncWithServer: syncCart } = useCartStore();
+
+  // Memoize sync functions to prevent unnecessary re-renders
+  const syncData = useCallback(() => {
+    syncWishlist();
+    syncCart();
+  }, [syncWishlist, syncCart]);
 
   useEffect(() => {
-    // Sync wishlist and cart with server
-    syncWishlist()
-    syncCart()
+    syncData(); // Sync wishlist & cart
 
-    // If no initial products were provided, fetch them
-    if (initialProducts.length === 0) {
-      const fetchProducts = async () => {
-        try {
-          const response = await fetch("/api/products")
-          if (!response.ok) throw new Error("Failed to fetch products")
+    const fetchProducts = async () => {
+      try {
+        const response = await fetch("/api/products");
 
-          const data = await response.json()
-          setProducts(data)
-        } catch (error) {
-          console.error("Error fetching products:", error)
-        } finally {
-          setLoading(false)
+        if (!response.ok) throw new Error("Failed to fetch products");
+
+        const data = await response.json();
+
+        if (!data.products || data.products.length === 0) {
+          throw new Error("No products available");
         }
-      }
 
-      fetchProducts()
-    }
-  }, [initialProducts, syncWishlist, syncCart])
+        setProducts(data.products);
+      } catch (error) {
+        console.error("Error fetching products:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, []); // Depend on `syncData` to avoid re-fetching unnecessarily
 
   if (loading) {
     return (
@@ -53,7 +61,7 @@ export default function ProductList({ initialProducts = [] }) {
           </div>
         ))}
       </div>
-    )
+    );
   }
 
   if (products.length === 0) {
@@ -61,7 +69,7 @@ export default function ProductList({ initialProducts = [] }) {
       <div className="text-center py-12">
         <p className="text-gray-500">No products found</p>
       </div>
-    )
+    );
   }
 
   return (
@@ -70,6 +78,5 @@ export default function ProductList({ initialProducts = [] }) {
         <ProductCard key={product._id} product={product} />
       ))}
     </div>
-  )
+  );
 }
-

@@ -2,68 +2,36 @@ import { NextResponse } from "next/server"
 import { hasRole, unauthorized, forbidden } from "@/lib/auth-middleware"
 import {connectToDatabase} from "@/lib/mongodb"
 import Product from "@/models/product"
+import Brand from "@/models/brand"
+import Category from "@/models/category"
 
-// Helper function to serialize MongoDB documents and handle ObjectIds
-function serializeMongoData(data) {
-  if (data === null || data === undefined) {
-    return data
-  }
-
-  // Handle Date objects
-  if (data instanceof Date) {
-    return data.toISOString()
-  }
-
-  // Handle arrays
-  if (Array.isArray(data)) {
-    return data.map((item) => serializeMongoData(item))
-  }
-
-  // Handle ObjectId (direct check)
-  if (data && typeof data === "object" && data.constructor && data.constructor.name === "ObjectId") {
-    return data.toString()
-  }
-
-  // Handle plain objects (including those with ObjectId properties)
-  if (data && typeof data === "object" && !Array.isArray(data)) {
-    const result = {}
-    for (const [key, value] of Object.entries(data)) {
-      // Skip functions
-      if (typeof value !== "function") {
-        result[key] = serializeMongoData(value)
-      }
-    }
-    return result
-  }
-
-  // Return primitive values as is
-  return data
-}
 
 // Get a single product (public)
 export async function GET(req, { params }) {
   try {
-    await connectToDatabase()
-    const {productId} = await params
+    await connectToDatabase();
+    const { slug } = await params;
 
-    const product = await Product.findById(productId)
-      .populate("category", "name slug")
-      .populate("brand", "name slug")
-      .lean()
+    let product = await Product.findOne({ slug }).lean();
 
     if (!product) {
-      return NextResponse.json({ error: "Product not found" }, { status: 404 })
+      return NextResponse.json({ error: `Product not found: ${slug}` }, { status: 404 });
     }
 
-    // Serialize the product to handle ObjectIds
-    const serializedProduct = serializeMongoData(product)
+    // Manually fetch category and brand details
+    const category = await Category.findById(product.category).select("name slug").lean();
+    const brand = await Brand.findById(product.brand).select("name slug").lean();
 
-    return NextResponse.json(serializedProduct)
+    product.category = category || product.category;
+    product.brand = brand || product.brand;
+
+    return NextResponse.json(product);
   } catch (error) {
-    console.error("Error fetching product:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    console.error("Error fetching product:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
+
 
 // Update a product (admin and superadmin only)
 export async function PUT(req, { params }) {
@@ -77,9 +45,8 @@ export async function PUT(req, { params }) {
     const productData = await req.json()
 
     await connectToDatabase()
-    const {productId} = await params
 
-    const product = await Product.findById(productId)
+    const product = await Product.findOne({ slug: params.slug })
 
     if (!product) {
       return NextResponse.json({ error: "Product not found" }, { status: 404 })
@@ -96,7 +63,7 @@ export async function PUT(req, { params }) {
     // Check if new slug already exists (if slug is being changed)
     if (productData.slug && productData.slug !== product.slug) {
       const existingProduct = await Product.findOne({ slug: productData.slug })
-      if (existingProduct && existingProduct._id.toString() !== params.productId) {
+      if (existingProduct && existingProduct._id.toString() !== product._id.toString()) {
         return NextResponse.json({ error: "Product with this slug already exists" }, { status: 400 })
       }
     }
@@ -109,7 +76,7 @@ export async function PUT(req, { params }) {
     await product.save()
 
     // Serialize the product to handle ObjectIds
-    const serializedProduct = serializeMongoData(product.toObject())
+    const serializedProduct = product
 
     return NextResponse.json({
       message: "Product updated successfully",
@@ -131,9 +98,8 @@ export async function DELETE(req, { params }) {
     }
 
     await connectToDatabase()
-    const {productId} = await params
 
-    const product = await Product.findByIdAndDelete(productId)
+    const product = await Product.findOneAndDelete({ slug: params.slug })
 
     if (!product) {
       return NextResponse.json({ error: "Product not found" }, { status: 404 })

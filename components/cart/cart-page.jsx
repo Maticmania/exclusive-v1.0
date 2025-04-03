@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { Minus, Plus, Trash2 } from "lucide-react"
+import { Minus, Plus, Trash2, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useCartStore } from "@/store/auth-store"
@@ -11,29 +11,43 @@ import { formatCurrency } from "@/lib/utils"
 import { toast } from "sonner"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 
-export default function CartPage({ initialCartItems = [] }) {
-  const { items, updateQuantity, removeItem, syncWithServer } = useCartStore()
-  const [isUpdating, setIsUpdating] = useState(false)
+export default function CartPage() {
+  const { items, total, updateQuantity, removeItem, syncWithServer } = useCartStore()
   const [couponCode, setCouponCode] = useState("")
+  const [loadingItemIds, setLoadingItemIds] = useState({})
+  const [isUpdatingCart, setIsUpdatingCart] = useState(false)
+  const [isApplyingCoupon, setIsApplyingCoupon] = useState(false)
 
   // Sync with server when component mounts
   useEffect(() => {
     syncWithServer()
   }, [syncWithServer])
 
-  const handleUpdateQuantity = async (productId, change) => {
-    const item = items.find((item) => item.product._id === productId)
+  // Set loading state for a specific item and action
+  const setItemLoading = (itemId, action, isLoading) => {
+    setLoadingItemIds((prev) => ({
+      ...prev,
+      [`${itemId}-${action}`]: isLoading,
+    }))
+  }
+
+  // Check if a specific item and action is loading
+  const isItemLoading = (itemId, action) => {
+    return !!loadingItemIds[`${itemId}-${action}`]
+  }
+
+  const handleUpdateQuantity = async (itemId, change) => {
+    const item = items.find((item) => item && item._id === itemId)
     if (!item) return
 
     const newQuantity = Math.max(1, item.quantity + change)
+    const action = change > 0 ? "increase" : "decrease"
 
-    setIsUpdating(true)
+    setItemLoading(itemId, action, true)
+
     try {
-      // Update local state first for immediate feedback
-      updateQuantity(productId, newQuantity)
-
-      // Then sync with server
-      await fetch(`/api/cart/${item.product._id}`, {
+      // Update on server
+      const response = await fetch(`/api/cart/${itemId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -42,39 +56,47 @@ export default function CartPage({ initialCartItems = [] }) {
           quantity: newQuantity,
         }),
       })
+
+      if (!response.ok) {
+        throw new Error("Failed to update cart")
+      }
+
+      // Update local state
+      updateQuantity(itemId, newQuantity)
     } catch (error) {
       console.error("Error updating cart:", error)
       toast.error("Failed to update cart")
     } finally {
-      setIsUpdating(false)
+      setItemLoading(itemId, action, false)
     }
   }
 
-  const handleRemoveItem = async (productId) => {
-    const item = items.find((item) => item.product._id === productId)
-    if (!item) return
+  const handleRemoveItem = async (itemId) => {
+    setItemLoading(itemId, "remove", true)
 
-    setIsUpdating(true)
     try {
-      // Update local state first for immediate feedback
-      removeItem(productId)
-
-      // Then sync with server
-      await fetch(`/api/cart/${item.product._id}`, {
+      // Remove from server
+      const response = await fetch(`/api/cart/${itemId}`, {
         method: "DELETE",
       })
 
+      if (!response.ok) {
+        throw new Error("Failed to remove item")
+      }
+
+      // Remove from local state
+      removeItem(itemId)
       toast.success("Item removed from cart")
     } catch (error) {
       console.error("Error removing item:", error)
       toast.error("Failed to remove item")
     } finally {
-      setIsUpdating(false)
+      setItemLoading(itemId, "remove", false)
     }
   }
 
   const handleUpdateCart = async () => {
-    setIsUpdating(true)
+    setIsUpdatingCart(true)
     try {
       await syncWithServer()
       toast.success("Cart updated")
@@ -82,7 +104,7 @@ export default function CartPage({ initialCartItems = [] }) {
       console.error("Error updating cart:", error)
       toast.error("Failed to update cart")
     } finally {
-      setIsUpdating(false)
+      setIsUpdatingCart(false)
     }
   }
 
@@ -92,18 +114,31 @@ export default function CartPage({ initialCartItems = [] }) {
       return
     }
 
-    // This would typically call an API to validate and apply the coupon
-    toast.info("Coupon functionality is not implemented yet")
+    setIsApplyingCoupon(true)
+
+    // Simulate API call
+    setTimeout(() => {
+      // This would typically call an API to validate and apply the coupon
+      toast.info("Coupon functionality is not implemented yet")
+      setIsApplyingCoupon(false)
+    }, 1000)
   }
 
-  const subtotal = items.reduce((sum, item) => sum + item.product.price * item.quantity, 0)
-
+  const subtotal = total
   // You could add shipping calculation here
   const shipping = 0 // Free shipping
-  const total = subtotal + shipping
+  const finalTotal = subtotal + shipping
 
   return (
-    <div className="w-full  mb-20 font-inter grid gap-10">
+    <div className="w-full px-[5%] mb-20 font-inter grid gap-10">
+      <div className="flex items-center gap-2 pt-10">
+        <Link href="/" className="text-sm text-gray-500 hover:text-gray-700">
+          Home
+        </Link>
+        <span className="text-sm text-gray-500">/</span>
+        <span className="text-sm">Cart</span>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <div className="md:col-span-2 lg:col-span-3">
           <Card className="w-full py-2 px-6 hidden md:inline-flex">
@@ -125,62 +160,86 @@ export default function CartPage({ initialCartItems = [] }) {
               </Button>
             </Card>
           ) : (
-            items.map((item) => (
-              <Card key={item.product._id} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 p-4">
-                <div className="flex items-center space-x-4 col-span-1 sm:col-span-2 md:col-span-1">
-                  <div className="relative h-20 w-20 overflow-hidden rounded-md">
-                    <Image
-                      src={item.product.images[0] || "/placeholder.svg"}
-                      alt={item.product.name}
-                      fill
-                      className="object-cover"
-                    />
-                  </div>
-                  <div>
-                    <h3 className="font-medium line-clamp-2">{item.product.name}</h3>
-                    <button
-                      onClick={() => handleRemoveItem(item.product._id)}
-                      className="text-sm text-red-500 flex items-center mt-1"
-                    >
-                      <Trash2 className="h-3 w-3 mr-1" />
-                      <span>Remove</span>
-                    </button>
-                  </div>
-                </div>
+            items.map(
+              (item) =>
+                item && (
+                  <Card key={item._id} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 p-4">
+                    <div className="flex items-center space-x-4 col-span-1 sm:col-span-2 md:col-span-1">
+                      <div className="relative h-20 w-20 overflow-hidden rounded-md">
+                        <Image
+                          src={(item.product && item.product.images && item.product.images[0]) || "/placeholder.svg"}
+                          alt={(item.product && item.product.name) || "Product"}
+                          fill
+                          className="object-cover"
+                        />
+                      </div>
+                      <div>
+                        <h3 className="font-medium line-clamp-2">{item.product ? item.product.name : "Product"}</h3>
+                        <button
+                          onClick={() => handleRemoveItem(item._id)}
+                          disabled={isItemLoading(item._id, "remove")}
+                          className="text-sm text-red-500 flex items-center mt-1 disabled:opacity-50"
+                        >
+                          {isItemLoading(item._id, "remove") ? (
+                            <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-3 w-3 mr-1" />
+                          )}
+                          <span>{isItemLoading(item._id, "remove") ? "Removing..." : "Remove"}</span>
+                        </button>
+                      </div>
+                    </div>
 
-                <div className="flex items-center justify-center">
-                  <p className="font-medium">{formatCurrency(item.product.price)}</p>
-                </div>
+                    <div className="flex items-center justify-center">
+                      <p className="font-medium">
+                        {formatCurrency(item.price || (item.product && item.product.price) || 0)}
+                      </p>
+                    </div>
 
-                <div className="flex items-center justify-center">
-                  <div className="flex items-center border rounded-md">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => handleUpdateQuantity(item.product._id, -1)}
-                      disabled={isUpdating || item.quantity <= 1}
-                    >
-                      <Minus className="h-3 w-3" />
-                    </Button>
-                    <span className="w-8 text-center">{item.quantity}</span>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => handleUpdateQuantity(item.product._id, 1)}
-                      disabled={isUpdating}
-                    >
-                      <Plus className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </div>
+                    <div className="flex items-center justify-center">
+                      <div className="flex items-center border rounded-md">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => handleUpdateQuantity(item._id, -1)}
+                          disabled={
+                            isItemLoading(item._id, "decrease") ||
+                            isItemLoading(item._id, "increase") ||
+                            item.quantity <= 1
+                          }
+                        >
+                          {isItemLoading(item._id, "decrease") ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <Minus className="h-3 w-3" />
+                          )}
+                        </Button>
+                        <span className="w-8 text-center">{item.quantity}</span>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => handleUpdateQuantity(item._id, 1)}
+                          disabled={isItemLoading(item._id, "increase") || isItemLoading(item._id, "decrease")}
+                        >
+                          {isItemLoading(item._id, "increase") ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <Plus className="h-3 w-3" />
+                          )}
+                        </Button>
+                      </div>
+                    </div>
 
-                <div className="flex items-center justify-end">
-                  <p className="font-semibold">{formatCurrency(item.product.price * item.quantity)}</p>
-                </div>
-              </Card>
-            ))
+                    <div className="flex items-center justify-end">
+                      <p className="font-semibold">
+                        {formatCurrency((item.price || (item.product && item.product.price) || 0) * item.quantity)}
+                      </p>
+                    </div>
+                  </Card>
+                ),
+            )
           )}
         </div>
 
@@ -190,8 +249,15 @@ export default function CartPage({ initialCartItems = [] }) {
               <Button variant="outline" asChild>
                 <Link href="/products">Continue Shopping</Link>
               </Button>
-              <Button variant="outline" onClick={handleUpdateCart} disabled={isUpdating}>
-                {isUpdating ? "Updating..." : "Update Cart"}
+              <Button variant="outline" onClick={handleUpdateCart} disabled={isUpdatingCart}>
+                {isUpdatingCart ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Updating...
+                  </>
+                ) : (
+                  "Update Cart"
+                )}
               </Button>
             </div>
 
@@ -203,10 +269,22 @@ export default function CartPage({ initialCartItems = [] }) {
                     value={couponCode}
                     onChange={(e) => setCouponCode(e.target.value)}
                     className="mb-2 sm:mb-0 sm:mr-2 font-poppins placeholder:text-gray-400"
+                    disabled={isApplyingCoupon}
                   />
                 </div>
-                <Button className="bg-primary hover:bg-primary/90" onClick={handleApplyCoupon} disabled={isUpdating}>
-                  Apply Coupon
+                <Button
+                  className="bg-primary hover:bg-primary/90"
+                  onClick={handleApplyCoupon}
+                  disabled={isApplyingCoupon}
+                >
+                  {isApplyingCoupon ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Applying...
+                    </>
+                  ) : (
+                    "Apply Coupon"
+                  )}
                 </Button>
               </div>
 
@@ -226,7 +304,7 @@ export default function CartPage({ initialCartItems = [] }) {
                     </div>
                     <div className="flex justify-between font-bold">
                       <span>Total:</span>
-                      <span>{formatCurrency(total)}</span>
+                      <span>{formatCurrency(finalTotal)}</span>
                     </div>
                   </CardContent>
                   <CardFooter>

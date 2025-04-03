@@ -7,6 +7,7 @@ import { Star, Truck, RotateCcw, Minus, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { formatCurrency } from "@/lib/utils"
 import AddToWishlistButton from "@/components/products/add-to-wishlist-button"
+import BuyNowButton from "./buy-now-button"
 
 export default function ProductDetails({ product }) {
   const [selectedImage, setSelectedImage] = useState(0)
@@ -93,19 +94,19 @@ export default function ProductDetails({ product }) {
               priority
             />
           </div>
-          <div className="grid md:grid-cols-1 lg:grid-cols-4 grid-cols-4 xl:grid-cols-1 gap-4">
-            {product.images.slice(0, 4).map((image, i) => (
+          <div className="flex flex-col gap-4">
+            {product.images.slice(0, 5).map((image, i) => (
               <div
                 key={i}
-                className={`aspect-square bg-gray-100 rounded-lg overflow-hidden cursor-pointer ${selectedImage === i ? "ring-2 ring-primary" : ""}`}
+                className={` w-[100px] lg:w-auto h-[100px] bg-gray-100 rounded-lg overflow-hidden cursor-pointer ${selectedImage === i ? "ring-2 ring-primary" : ""}`}
                 onClick={() => setSelectedImage(i)}
               >
                 <Image
                   src={image || "/placeholder.svg?height=150&width=150"}
                   alt={`${product.name} - Image ${i + 1}`}
-                  width={150}
-                  height={150}
-                  className="w-full h-full object-contain"
+                  width={100}
+                  height={100}
+                  className="w-[100px] h-[100px] object-contain"
                 />
               </div>
             ))}
@@ -186,7 +187,7 @@ export default function ProductDetails({ product }) {
             </div>
           )}
 
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-4 ">
             <div className="flex items-center border rounded-md">
               <button className="px-3 py-1 text-xl" onClick={decreaseQuantity} disabled={quantity <= 1}>
                 <Minus className="h-4 w-4" />
@@ -196,18 +197,11 @@ export default function ProductDetails({ product }) {
                 <Plus className="h-4 w-4" />
               </button>
             </div>
+            <div className="w-full">
+            <BuyNowButton className={"w-full"} product={product} quantity={quantity} />
+            </div>
 
-            <Button
-              className="flex-1 bg-bgsecondary hover:bg-hover text-white"
-              disabled={product.stock <= 0}
-              onClick={() => {
-                // Handle buy now logic
-              }}
-            >
-              Buy Now
-            </Button>
-
-            <AddToWishlistButton productId={product._id} />
+            <AddToWishlistButton product={product} className="sm:w-auto" />
           </div>
 
           <div className="mt-4 rounded border">

@@ -1,242 +1,165 @@
 import mongoose from "mongoose"
 
-// Review schema as a subdocument
-const reviewSchema = new mongoose.Schema(
-  {
-    rating: {
-      type: Number,
-      required: true,
-      min: 1,
-      max: 5,
-    },
-    comment: {
-      type: String,
-      required: true,
-    },
-    reviewerName: {
-      type: String,
-      required: true,
-    },
-    reviewerEmail: {
-      type: String,
-      required: true,
-    },
-    date: {
-      type: Date,
-      default: Date.now,
-    },
-    user: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-    },
-  },
-  { timestamps: true },
-)
-
-// Variant option schema (for colors, sizes, etc.)
-const variantOptionSchema = new mongoose.Schema({
-  name: {
-    type: String,
-    required: true,
-  },
-  value: {
-    type: String,
-    required: true,
-  },
-  additionalPrice: {
-    type: Number,
-    default: 0,
-  },
+// Define the variant schema
+const variantSchema = new mongoose.Schema({
+  color: String,
+  size: String,
   stock: {
     type: Number,
     default: 0,
-    min: 0,
   },
-  sku: {
-    type: String,
+  price: {
+    type: Number,
+    required: true,
   },
-  image: {
-    type: String,
-  },
+  sku: String,
+  images: [String],
 })
 
-// Variant type schema (color, size, etc.)
-const variantTypeSchema = new mongoose.Schema({
-  name: {
+// Define the review schema
+const reviewSchema = new mongoose.Schema({
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    required: true,
+  },
+  rating: {
+    type: Number,
+    required: true,
+    min: 1,
+    max: 5,
+  },
+  comment: {
     type: String,
     required: true,
   },
-  options: [variantOptionSchema],
-})
-
-// Dimensions schema
-const dimensionsSchema = new mongoose.Schema({
-  length: {
-    type: Number,
-  },
-  width: {
-    type: Number,
-  },
-  height: {
-    type: Number,
-  },
-  unit: {
-    type: String,
-    default: "cm",
+  createdAt: {
+    type: Date,
+    default: Date.now,
   },
 })
 
+// Define the product schema
 const productSchema = new mongoose.Schema(
   {
     name: {
       type: String,
-      required: [true, "Product name is required"],
+      required: true,
       trim: true,
     },
     slug: {
       type: String,
-      required: [true, "Product slug is required"],
-      trim: true,
+      required: true,
       unique: true,
       lowercase: true,
     },
     description: {
       type: String,
-      required: [true, "Product description is required"],
+      required: true,
     },
     price: {
       type: Number,
-      required: [true, "Product price is required"],
-      min: [0, "Price cannot be negative"],
+      required: true,
     },
     compareAtPrice: {
       type: Number,
-      min: [0, "Compare at price cannot be negative"],
+      default: 0,
     },
-    discountPercentage: {
-      type: Number,
-      min: 0,
-      max: 100,
-      default: function () {
-        if (this.compareAtPrice && this.price) {
-          return Math.round(((this.compareAtPrice - this.price) / this.compareAtPrice) * 100)
-        }
-        return 0
-      },
-    },
-    images: [
-      {
-        type: String,
-      },
-    ],
-    category: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Category",
-      required: [true, "Product category is required"],
-    },
+      category: { 
+      type: mongoose.Schema.Types.ObjectId, 
+      ref: "Category" 
+    }, // ✅ Must be ObjectId
     brand: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Brand",
     },
     stock: {
       type: Number,
-      required: [true, "Stock quantity is required"],
-      min: [0, "Stock cannot be negative"],
+      required: true,
+      default: 0,
+    },
+    sold: {
+      type: Number,
+      default: 0,
+    },
+    images: [String],
+    variants: [variantSchema],
+    reviews: [reviewSchema],
+    ratings: {
+      type: Number,
+      default: 0,
+    },
+    numReviews: {
+      type: Number,
+      default: 0,
     },
     featured: {
       type: Boolean,
       default: false,
     },
-    isPublished: {
+    freeShipping: {
       type: Boolean,
-      default: true,
+      default: false,
     },
-    // New fields
-    tags: [
-      {
-        type: String,
-        trim: true,
-      },
-    ],
     sku: {
       type: String,
-      trim: true,
+      unique: true,
     },
-    weight: {
-      type: Number,
-      min: 0,
-    },
-    weightUnit: {
+    tags: [String],
+    status: {
       type: String,
-      default: "kg",
-      enum: ["kg", "g", "lb", "oz"],
-    },
-    dimensions: dimensionsSchema,
-    variants: [variantTypeSchema],
-    warrantyInformation: {
-      type: String,
-    },
-    shippingInformation: {
-      type: String,
-    },
-    availabilityStatus: {
-      type: String,
-      enum: ["In Stock", "Low Stock", "Out of Stock", "Backorder", "Discontinued"],
-      default: function () {
-        if (this.stock <= 0) return "Out of Stock"
-        if (this.stock < 5) return "Low Stock"
-        return "In Stock"
-      },
-    },
-    reviews: [reviewSchema],
-    rating: {
-      type: Number,
-      min: 0,
-      max: 5,
-      default: 0,
-    },
-    reviewCount: {
-      type: Number,
-      default: 0,
-    },
-    createdAt: {
-      type: Date,
-      default: Date.now,
-    },
-    updatedAt: {
-      type: Date,
-      default: Date.now,
+      enum: ["draft", "published", "archived"],
+      default: "published",
     },
   },
   {
     timestamps: true,
-    toJSON: { virtuals: true },
-    toObject: { virtuals: true },
   },
 )
 
-// Calculate average rating when reviews are added or modified
+// Calculate average rating before saving
 productSchema.pre("save", function (next) {
-  if (this.reviews && this.reviews.length > 0) {
-    const totalRating = this.reviews.reduce((sum, review) => sum + review.rating, 0)
-    this.rating = Number.parseFloat((totalRating / this.reviews.length).toFixed(2))
-    this.reviewCount = this.reviews.length
-  } else {
-    this.rating = 0
-    this.reviewCount = 0
+  if (this.reviews.length > 0) {
+    this.ratings = this.reviews.reduce((acc, item) => item.rating + acc, 0) / this.reviews.length
+    this.numReviews = this.reviews.length
   }
-
-  // Update availability status based on stock
-  if (this.stock <= 0) {
-    this.availabilityStatus = "Out of Stock"
-  } else if (this.stock < 5) {
-    this.availabilityStatus = "Low Stock"
-  } else {
-    this.availabilityStatus = "In Stock"
-  }
-
   next()
 })
+
+// Helper method to convert MongoDB ObjectId to string
+// productSchema.methods.toJSON = function () {
+//   const product = this.toObject()
+//   product._id = product._id.toString()
+
+//   if (product.category) {
+//     product.category = product.category.toString()
+//   }
+
+//   if (product.brand) {
+//     product.brand = product.brand.toString()
+//   }
+
+//   if (product.variants && product.variants.length > 0) {
+//     product.variants = product.variants.map((variant) => {
+//       return {
+//         ...variant,
+//         _id: variant._id.toString(),
+//       }
+//     })
+//   }
+
+//   if (product.reviews && product.reviews.length > 0) {
+//     product.reviews = product.reviews.map((review) => {
+//       return {
+//         ...review,
+//         _id: review._id.toString(),
+//         user: review.user.toString(),
+//       }
+//     })
+//   }
+
+//   return product
+// }
 
 const Product = mongoose.models.Product || mongoose.model("Product", productSchema)
 

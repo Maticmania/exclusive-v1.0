@@ -1,60 +1,49 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { BsCart3, BsCheck } from "react-icons/bs"
-import { useCartStore } from "@/store/auth-store"
-import { toast } from "sonner"
 import { useRouter } from "next/navigation"
+import { useCartStore } from "@/store/auth-store"
+import { Button } from "@/components/ui/button"
+import { ShoppingCart, Check } from "lucide-react"
+import { toast } from "sonner"
 
-export default function AddToCartButton({ product, buttonText = "Add to Cart" }) {
-  const [quantity, setQuantity] = useState(1)
-  const [isAdding, setIsAdding] = useState(false)
-  const [isAdded, setIsAdded] = useState(false)
-  const { addItem, items } = useCartStore()
+export default function AddToCartButton({
+  product,
+  className,
+  buttonText = "Add To Cart",
+  variant = null,
+  quantity = 1,
+  buyNow = false,
+}) {
   const router = useRouter()
+  const [isAddingToCart, setIsAddingToCart] = useState(false)
+  const [isInCart, setIsInCart] = useState(false)
+  const { addItem, items } = useCartStore()
 
   // Check if product is already in cart
   useEffect(() => {
-    const productInCart = items.find((item) => item.product._id === product._id)
-    if (productInCart) {
-      setIsAdded(true)
-    }
-  }, [items, product._id])
-
-  const handleQuantityChange = (e) => {
-    const value = Number.parseInt(e.target.value)
-    if (!isNaN(value) && value > 0 && value <= product.stock) {
-      setQuantity(value)
-    }
-  }
-
-  const increaseQuantity = () => {
-    if (quantity < product.stock) {
-      setQuantity(quantity + 1)
-    }
-  }
-
-  const decreaseQuantity = () => {
-    if (quantity > 1) {
-      setQuantity(quantity - 1)
-    }
-  }
+    const productInCart = items.find(
+      (item) =>
+        item.product._id === product._id &&
+        ((!variant && !item.variant) || (variant && item.variant && item.variant === variant._id)),
+    )
+    setIsInCart(!!productInCart)
+  }, [items, product._id, variant])
 
   const handleAddToCart = async () => {
-    if (product.stock < 1) {
-      toast.error("Product is out of stock")
-      return
-    }
+    if (isInCart && !buyNow) return
 
-    setIsAdding(true)
+    setIsAddingToCart(true)
 
     try {
+      // Get the variant ID if a variant is selected
+      const variantId = variant ? variant._id : null
+
       // Add to local store first for immediate feedback
-      addItem(product, quantity)
+      addItem(product, quantity, variantId)
 
       // Then sync with server
-      await fetch("/api/cart", {
+      const response = await fetch("/api/cart", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -62,66 +51,51 @@ export default function AddToCartButton({ product, buttonText = "Add to Cart" })
         body: JSON.stringify({
           productId: product._id,
           quantity,
+          variantId,
         }),
       })
 
-      setIsAdded(true)
+      if (!response.ok) {
+        throw new Error("Failed to add to cart")
+      }
 
-      // If button text is "Buy Now", redirect to cart
-      if (buttonText === "Buy Now") {
-        router.push("/cart")
-      } else {
+      setIsInCart(true)
+
+      if (!buyNow) {
         toast.success("Added to cart", {
           description: `${product.name} has been added to your cart.`,
-          action: {
-            label: "View Cart",
-            onClick: () => router.push("/cart"),
-          },
         })
+      } else {
+        // If buy now, redirect to checkout
+        router.push("/checkout")
       }
     } catch (error) {
       console.error("Error adding to cart:", error)
       toast.error("Failed to add item to cart")
     } finally {
-      setIsAdding(false)
-
-      // Reset isAdded state after 2 seconds if not redirecting
-      if (buttonText !== "Buy Now") {
-        setTimeout(() => {
-          setIsAdded(false)
-        }, 2000)
-      }
+      setIsAddingToCart(false)
     }
   }
 
-  // If on product detail page with quantity selector
-  if (buttonText === "Buy Now") {
-    return (
-      <Button onClick={handleAddToCart} disabled={isAdding || product.stock < 1} className="w-full">
-        {isAdding ? "Adding..." : buttonText}
-      </Button>
-    )
-  }
-
-  // For product cards
   return (
     <Button
       onClick={handleAddToCart}
-      disabled={isAdding || product.stock < 1 || isAdded}
-      className="w-full flex items-center justify-center gap-2"
-      variant={isAdded ? "outline" : "default"}
+      disabled={isAddingToCart || product.stock <= 0 || (isInCart && !buyNow)}
+      className={className}
     >
-      {isAdding ? (
+      {isAddingToCart ? (
         "Adding..."
-      ) : isAdded ? (
+      ) : product.stock <= 0 ? (
+        "Out of Stock"
+      ) : isInCart && !buyNow ? (
         <>
-          <BsCheck className="h-5 w-5" />
-          <span>Added</span>
+          <Check className="mr-2 h-4 w-4" />
+          Added
         </>
       ) : (
         <>
-          <BsCart3 className="h-4 w-4" />
-          <span>{buttonText}</span>
+          <ShoppingCart className="mr-2 h-4 w-4" />
+          {buttonText}
         </>
       )}
     </Button>

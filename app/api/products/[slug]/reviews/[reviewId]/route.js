@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth/next"
-import { authOptions } from "@/lib/auth"
-import { hasRole } from "@/lib/auth-middleware"
+import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import {connectToDatabase} from "@/lib/mongodb"
 import Product from "@/models/product"
 
-// Update a review (owner or admin only)
+// Update a review
 export async function PUT(req, { params }) {
   try {
     const session = await getServerSession(authOptions)
@@ -25,36 +24,29 @@ export async function PUT(req, { params }) {
     }
 
     await connectToDatabase()
-    const {productId} = await params
 
-    const product = await Product.findById(productId)
+    const product = await Product.findOne({ slug: params.slug })
 
     if (!product) {
       return NextResponse.json({ error: "Product not found" }, { status: 404 })
     }
-    const {reviewId} = await params
 
     // Find the review
-    const reviewIndex = product.reviews.findIndex((review) => review._id.toString() === reviewId)
+    const reviewIndex = product.reviews.findIndex(
+      (review) => review._id.toString() === params.reviewId && review.user.toString() === session.user.id,
+    )
 
     if (reviewIndex === -1) {
-      return NextResponse.json({ error: "Review not found" }, { status: 404 })
+      return NextResponse.json({ error: "Review not found or you are not authorized to update it" }, { status: 404 })
     }
 
-    const review = product.reviews[reviewIndex]
-
-    // Check if user is the review owner or an admin
-    const isOwner = review.user && review.user.toString() === session.user.id
-    const { authorized } = await hasRole(["admin", "superadmin"])
-
-    if (!isOwner && !authorized) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 })
-    }
-
-    // Update review
+    // Update the review
     product.reviews[reviewIndex].rating = rating
     product.reviews[reviewIndex].comment = comment
-    product.reviews[reviewIndex].date = new Date()
+    product.reviews[reviewIndex].updatedAt = Date.now()
+
+    // Update product rating
+    product.rating = product.reviews.reduce((sum, review) => sum + review.rating, 0) / product.reviews.length
 
     await product.save()
 
@@ -68,7 +60,7 @@ export async function PUT(req, { params }) {
   }
 }
 
-// Delete a review (owner or admin only)
+// Delete a review
 export async function DELETE(req, { params }) {
   try {
     const session = await getServerSession(authOptions)
@@ -78,34 +70,34 @@ export async function DELETE(req, { params }) {
     }
 
     await connectToDatabase()
-    const {productId} = await params
 
-    const product = await Product.findById(productId)
+    const product = await Product.findOne({ slug: params.slug })
 
     if (!product) {
       return NextResponse.json({ error: "Product not found" }, { status: 404 })
     }
-    const {reviewId} = await params
 
     // Find the review
-    const reviewIndex = product.reviews.findIndex((review) => review._id.toString() === reviewId)
+    const reviewIndex = product.reviews.findIndex(
+      (review) =>
+        review._id.toString() === params.reviewId &&
+        (review.user.toString() === session.user.id || session.user.role === "admin"),
+    )
 
     if (reviewIndex === -1) {
-      return NextResponse.json({ error: "Review not found" }, { status: 404 })
+      return NextResponse.json({ error: "Review not found or you are not authorized to delete it" }, { status: 404 })
     }
 
-    const review = product.reviews[reviewIndex]
-
-    // Check if user is the review owner or an admin
-    const isOwner = review.user && review.user.toString() === session.user.id
-    const { authorized } = await hasRole(["admin", "superadmin"])
-
-    if (!isOwner && !authorized) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 })
-    }
-
-    // Remove review
+    // Remove the review
     product.reviews.splice(reviewIndex, 1)
+
+    // Update product rating
+    if (product.reviews.length > 0) {
+      product.rating = product.reviews.reduce((sum, review) => sum + review.rating, 0) / product.reviews.length
+    } else {
+      product.rating = 0
+    }
+
     await product.save()
 
     return NextResponse.json({

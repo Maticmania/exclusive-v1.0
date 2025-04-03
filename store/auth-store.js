@@ -40,6 +40,7 @@ export const useAuthStore = create(
         return roles.includes(user.role)
       },
 
+      // Role checking functions
       isAdmin: () => {
         const { hasRole } = get()
         return hasRole(["admin", "superadmin"])
@@ -63,16 +64,32 @@ export const useCartStore = create(
     (set, get) => ({
       items: [],
       total: 0,
+      isLoading: false,
 
       // Add item to cart
-      addItem: (product, quantity = 1) => {
+      addItem: (product, quantity = 1, variantId = null) => {
+        // Check if product is valid
+        if (!product || !product._id) {
+          console.error("Invalid product data:", product)
+          return
+        }
+
         const { items } = get()
-        const existingItem = items.find((item) => item.product._id === product._id)
+        const existingItem = items.find(
+          (item) =>
+            item.product &&
+            item.product._id === product._id &&
+            ((!variantId && !item.variant) || (variantId && item.variant && item.variant === variantId)),
+        )
 
         if (existingItem) {
           // Update quantity if item exists
           const updatedItems = items.map((item) =>
-            item.product._id === product._id ? { ...item, quantity: item.quantity + quantity } : item,
+            item.product &&
+            item.product._id === product._id &&
+            ((!variantId && !item.variant) || (variantId && item.variant && item.variant === variantId))
+              ? { ...item, quantity: item.quantity + quantity }
+              : item,
           )
 
           set({
@@ -81,7 +98,16 @@ export const useCartStore = create(
           })
         } else {
           // Add new item
-          const newItems = [...items, { product, quantity }]
+          const newItem = {
+            product,
+            quantity,
+          }
+
+          if (variantId) {
+            newItem.variant = variantId
+          }
+
+          const newItems = [...items, newItem]
           set({
             items: newItems,
             total: calculateTotal(newItems),
@@ -90,9 +116,9 @@ export const useCartStore = create(
       },
 
       // Update item quantity
-      updateQuantity: (productId, quantity) => {
+      updateQuantity: (itemId, quantity) => {
         const { items } = get()
-        const updatedItems = items.map((item) => (item.product._id === productId ? { ...item, quantity } : item))
+        const updatedItems = items.map((item) => (item._id === itemId ? { ...item, quantity } : item))
 
         set({
           items: updatedItems,
@@ -101,9 +127,9 @@ export const useCartStore = create(
       },
 
       // Remove item from cart
-      removeItem: (productId) => {
+      removeItem: (itemId) => {
         const { items } = get()
-        const updatedItems = items.filter((item) => item.product._id !== productId)
+        const updatedItems = items.filter((item) => item._id !== itemId)
 
         set({
           items: updatedItems,
@@ -114,32 +140,26 @@ export const useCartStore = create(
       // Clear cart
       clearCart: () => set({ items: [], total: 0 }),
 
+      // Set loading state
+      setLoading: (isLoading) => set({ isLoading }),
+
       // Sync cart with server
       syncWithServer: async () => {
         try {
+          set({ isLoading: true })
           const response = await fetch("/api/cart")
           if (!response.ok) throw new Error("Failed to fetch cart")
 
           const data = await response.json()
 
-          // Ensure we're properly handling the data
-          const sanitizedItems = data.items.map((item) => ({
-            product: {
-              _id: item.product._id.toString(),
-              name: item.product.name,
-              price: item.product.price,
-              images: item.product.images || [],
-              // Add other necessary fields but avoid complex objects
-            },
-            quantity: item.quantity,
-          }))
-
           set({
-            items: sanitizedItems,
-            total: data.total,
+            items: data.items || [],
+            total: data.total || 0,
+            isLoading: false,
           })
         } catch (error) {
           console.error("Error syncing cart:", error)
+          set({ isLoading: false })
         }
       },
     }),
@@ -150,9 +170,15 @@ export const useCartStore = create(
   ),
 )
 
+// Update the calculateTotal function to handle null values
+
 // Helper function to calculate total
 function calculateTotal(items) {
-  return items.reduce((sum, item) => sum + item.product.price * item.quantity, 0)
+  return items.reduce((sum, item) => {
+    if (!item || !item.product) return sum
+    const price = item.price || (item.product && item.product.price) || 0
+    return sum + price * (item.quantity || 1)
+  }, 0)
 }
 
 // Create a wishlist store
