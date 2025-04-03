@@ -1,5 +1,16 @@
 import mongoose from "mongoose"
 
+// Define the dimensions schema
+const dimensionsSchema = new mongoose.Schema({
+  width: Number,
+  height: Number,
+  depth: Number,
+  unit: {
+    type: String,
+    default: "cm",
+  },
+})
+
 // Define the variant schema
 const variantSchema = new mongoose.Schema({
   color: String,
@@ -65,10 +76,10 @@ const productSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
-      category: { 
-      type: mongoose.Schema.Types.ObjectId, 
-      ref: "Category" 
-    }, // ✅ Must be ObjectId
+    category: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Category",
+    },
     brand: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Brand",
@@ -83,6 +94,7 @@ const productSchema = new mongoose.Schema(
       default: 0,
     },
     images: [String],
+    thumbnail: String,
     variants: [variantSchema],
     reviews: [reviewSchema],
     ratings: {
@@ -111,9 +123,45 @@ const productSchema = new mongoose.Schema(
       enum: ["draft", "published", "archived"],
       default: "published",
     },
+    warrantyInformation: {
+      type: String,
+      default: "",
+    },
+    shippingInformation: {
+      type: String,
+      default: "",
+    },
+    returnPolicy: {
+      type: String,
+      default: "",
+    },
+    minimumOrderQuantity: {
+      type: Number,
+      default: 1,
+    },
+    weight: {
+      type: Number,
+      default: 0,
+    },
+    weightUnit: {
+      type: String,
+      default: "kg",
+    },
+    dimensions: dimensionsSchema,
+    availabilityStatus: {
+      type: String,
+      enum: ["In Stock", "Low Stock", "Out of Stock", "Pre-order"],
+      default: "In Stock",
+    },
+    discountPercentage: {
+      type: Number,
+      default: 0,
+    },
   },
   {
     timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
   },
 )
 
@@ -126,40 +174,6 @@ productSchema.pre("save", function (next) {
   next()
 })
 
-// Helper method to convert MongoDB ObjectId to string
-// productSchema.methods.toJSON = function () {
-//   const product = this.toObject()
-//   product._id = product._id.toString()
-
-//   if (product.category) {
-//     product.category = product.category.toString()
-//   }
-
-//   if (product.brand) {
-//     product.brand = product.brand.toString()
-//   }
-
-//   if (product.variants && product.variants.length > 0) {
-//     product.variants = product.variants.map((variant) => {
-//       return {
-//         ...variant,
-//         _id: variant._id.toString(),
-//       }
-//     })
-//   }
-
-//   if (product.reviews && product.reviews.length > 0) {
-//     product.reviews = product.reviews.map((review) => {
-//       return {
-//         ...review,
-//         _id: review._id.toString(),
-//         user: review.user.toString(),
-//       }
-//     })
-//   }
-
-//   return product
-// }
 
 const Product = mongoose.models.Product || mongoose.model("Product", productSchema)
 

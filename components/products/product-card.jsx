@@ -11,9 +11,7 @@ import AddToCartButton from "./add-to-cart-button"
 
 export default function ProductCard({ product }) {
   const [isHovering, setIsHovering] = useState(false)
-  const [isAddingToCart, setIsAddingToCart] = useState(false)
   const [isTogglingWishlist, setIsTogglingWishlist] = useState(false)
-  const { addItem } = useCartStore()
   const { addProduct, removeProduct, isInWishlist } = useWishlistStore()
   const { isAuthenticated } = useAuthStore()
 
@@ -24,36 +22,6 @@ export default function ProductCard({ product }) {
     product.compareAtPrice && product.price < product.compareAtPrice
       ? Math.round(((product.compareAtPrice - product.price) / product.compareAtPrice) * 100)
       : null
-
-  const handleAddToCart = async () => {
-    setIsAddingToCart(true)
-
-    try {
-      // Add to local store first for immediate feedback
-      addItem(product)
-
-      // Then sync with server
-      await fetch("/api/cart", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          productId: product._id,
-          quantity: 1,
-        }),
-      })
-
-      toast.success("Added to cart", {
-        description: `${product.name} has been added to your cart.`,
-      })
-    } catch (error) {
-      console.error("Error adding to cart:", error)
-      toast.error("Failed to add item to cart")
-    } finally {
-      setIsAddingToCart(false)
-    }
-  }
 
   const handleToggleWishlist = async () => {
     if (!isAuthenticated) {
@@ -116,7 +84,7 @@ export default function ProductCard({ product }) {
       <div className="relative h-48 w-full overflow-hidden">
         <Link href={`/products/${product.slug}`}>
           <Image
-            src={product.images?.[0] || "/placeholder.svg?height=192&width=256"}
+            src={product.thumbnail || "/placeholder.svg?height=192&width=256"}
             alt={product.name}
             fill
             className="object-cover group-hover:scale-105 transition-transform duration-300"
@@ -179,13 +147,6 @@ export default function ProductCard({ product }) {
           }`}
         >
           <AddToCartButton product={product}  className={"w-full py-2 bg-black text-white text-sm font-medium rounded hover:bg-gray-800 transition-colors disabled:bg-gray-400"} />
-          {/* <button
-            onClick={handleAddToCart}
-            disabled={isAddingToCart || product.stock <= 0}
-            className="w-full py-2 bg-black text-white text-sm font-medium rounded hover:bg-gray-800 transition-colors disabled:bg-gray-400"
-          >
-            {isAddingToCart ? "Adding..." : product.stock <= 0 ? "Out of Stock" : "Add To Cart"}
-          </button> */}
         </div>
       </div>
     </div>

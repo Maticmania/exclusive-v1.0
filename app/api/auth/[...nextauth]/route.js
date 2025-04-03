@@ -100,5 +100,5 @@ async function getInitialUserRole() {
 
 const handler = NextAuth(extendedAuthOptions)
 
-export { handler as GET, handler as POST }
+export { handler as GET, handler as POST, authOptions }
 
