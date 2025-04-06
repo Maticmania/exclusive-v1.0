@@ -46,30 +46,32 @@ function serializeMongoData(data) {
 // Update the getProducts function to handle pagination and all filters
 async function getProducts(searchParams) {
   await connectToDatabase()
-
+  
+  const { category, brand, brands, minPrice, maxPrice, featured, search, sort } = await searchParams 
   const query = {}
   const page = Number(searchParams.page) || 1
   const limit = Number(searchParams.limit) || 12
   const skip = (page - 1) * limit
 
+
   // Filter by category slug
-  if (searchParams.category) {
+  if (category) {
     // Find category by slug
-    const category = await Category.findOne({ slug: searchParams.category }).lean()
+    const category = await Category.findOne({ slug: category }).lean()
     if (category) {
       query.category = category._id
     }
   }
 
   // Filter by brand
-  if (searchParams.brand) {
+  if (brand) {
     // Find brand by slug
-    const brand = await Brand.findOne({ slug: searchParams.brand }).lean()
+    const brand = await Brand.findOne({ slug: brand }).lean()
     if (brand) {
       query.brand = brand._id
     }
-  } else if (searchParams.brands) {
-    const brandSlugs = searchParams.brands.split(",")
+  } else if (brands) {
+    const brandSlugs = brands.split(",")
     if (brandSlugs.length > 0) {
       const brands = await Brand.find({ slug: { $in: brandSlugs } }).lean()
       if (brands.length > 0) {
@@ -79,36 +81,37 @@ async function getProducts(searchParams) {
   }
 
   // Filter by price range
-  if (searchParams.minPrice || searchParams.maxPrice) {
+  if (minPrice || maxPrice) {
     query.price = {}
-    if (searchParams.minPrice) {
-      query.price.$gte = Number.parseFloat(searchParams.minPrice)
+    if (minPrice) {
+      query.price.$gte = Number.parseFloat(minPrice)
     }
-    if (searchParams.maxPrice) {
-      query.price.$lte = Number.parseFloat(searchParams.maxPrice)
+    if (maxPrice) {
+      query.price.$lte = Number.parseFloat(maxPrice)
     }
   }
 
   // Featured products
-  if (searchParams.featured === "true") {
+  if (featured === "true") {
     query.featured = true
   }
 
   // Search by name or description
-  if (searchParams.search) {
+  if (search) {
     query.$or = [
-      { name: { $regex: searchParams.search, $options: "i" } },
-      { description: { $regex: searchParams.search, $options: "i" } },
+      { name: { $regex: search, $options: "i" } },
+      { description: { $regex: search, $options: "i" } },
+      {tags: { $regex: search, $options: "i" } }
     ]
   }
 
   // Only show published products
-  query.isPublished = true
+  // query.isPublished = true
 
   // Sort options
   let sortOptions = { createdAt: -1 }
-  if (searchParams.sort) {
-    switch (searchParams.sort) {
+  if (sort) {
+    switch (sort) {
       case "price-asc":
         sortOptions = { price: 1 }
         break
@@ -155,15 +158,15 @@ export default async function ProductsPage({ searchParams }) {
 
   // Construct breadcrumb items
   const breadcrumbItems = [{ label: "Products" }]
-
-  if (searchParams.category) {
-    breadcrumbItems.push({ label: searchParams.category.replace(/-/g, " ") })
+  const {category} =  await searchParams
+  if (category) {
+    breadcrumbItems.push({ label: category.replace(/-/g, " ") })
   }
 
   return (
     <div className="container max-w-screen-xl mx-auto px-4 py-10">
       {/* Breadcrumbs */}
-      <div className="mb-6 capitalize">
+      <div className="mb-6">
         <Breadcrumb items={breadcrumbItems} />
       </div>
 

@@ -94,23 +94,26 @@ export default function ProductDetails({ product }) {
               priority
             />
           </div>
-          <div className="flex flex-col gap-4">
-            {product.images.slice(0, 5).map((image, i) => (
-              <div
-                key={i}
-                className={` w-[100px] lg:w-auto h-[100px] bg-gray-100 rounded-lg overflow-hidden cursor-pointer ${selectedImage === i ? "ring-2 ring-primary" : ""}`}
-                onClick={() => setSelectedImage(i)}
-              >
-                <Image
-                  src={image || "/placeholder.svg?height=150&width=150"}
-                  alt={`${product.name} - Image ${i + 1}`}
-                  width={100}
-                  height={100}
-                  className="w-[100px] h-[100px] object-contain"
-                />
-              </div>
-            ))}
-          </div>
+          <div className="flex flex-row md:flex-col gap-4 overflow-y-auto md:max-h-[400px] scrollbar-none">
+  {product.images.slice(0, 5).map((image, i) => (
+    <div
+      key={i}
+      className={`w-[100px] lg:w-auto h-[100px] bg-gray-100 rounded-lg overflow-hidden cursor-pointer ${
+        selectedImage === i ? "border-2 border-primary" : ""
+      }`}
+      onClick={() => setSelectedImage(i)}
+    >
+      <Image
+        src={image || "/placeholder.svg?height=150&width=150"}
+        alt={`${product.name} - Image ${i + 1}`}
+        width={100}
+        height={100}
+        className="w-[100px] h-[100px] object-contain"
+      />
+    </div>
+  ))}
+</div>
+
         </div>
 
         {/* Product Details */}

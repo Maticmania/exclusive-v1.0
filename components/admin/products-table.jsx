@@ -36,11 +36,11 @@ export default function ProductsTable({ products }) {
       },
     },
     {
-      accessorKey: "isPublished",
+      accessorKey: "status",
       header: "Status",
       cell: ({ row }) => {
-        const isPublished = row.getValue("isPublished")
-        return <Badge variant={isPublished ? "default" : "secondary"}>{isPublished ? "Published" : "Draft"}</Badge>
+        const isPublished = status === "published"
+        return <Badge variant={status === "published" ? "default" : "default"}>{isPublished ? "Published" : "Published"}</Badge>
       },
     },
     {

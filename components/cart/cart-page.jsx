@@ -1,133 +1,120 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import Image from "next/image"
-import Link from "next/link"
-import { Minus, Plus, Trash2, Loader2 } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { useCartStore } from "@/store/auth-store"
-import { formatCurrency } from "@/lib/utils"
-import { toast } from "sonner"
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { useState, useEffect } from "react";
+import Image from "next/image";
+import Link from "next/link";
+import { Minus, Plus, Trash2, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { useCartStore } from "@/store/auth-store";
+import { formatCurrency } from "@/lib/utils";
+import { toast } from "sonner";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function CartPage() {
-  const { items, total, updateQuantity, removeItem, syncWithServer } = useCartStore()
-  const [couponCode, setCouponCode] = useState("")
-  const [loadingItemIds, setLoadingItemIds] = useState({})
-  const [isUpdatingCart, setIsUpdatingCart] = useState(false)
-  const [isApplyingCoupon, setIsApplyingCoupon] = useState(false)
+  const { items, total, updateQuantity, removeItem, syncWithServer } = useCartStore();
+  const [couponCode, setCouponCode] = useState("");
+  const [loadingItemIds, setLoadingItemIds] = useState({});
+  const [isUpdatingCart, setIsUpdatingCart] = useState(false);
+  const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState({}); // Track which images have loaded
 
   // Sync with server when component mounts
   useEffect(() => {
-    syncWithServer()
-  }, [syncWithServer])
+    syncWithServer();
+  }, [syncWithServer]);
 
   // Set loading state for a specific item and action
   const setItemLoading = (itemId, action, isLoading) => {
     setLoadingItemIds((prev) => ({
       ...prev,
       [`${itemId}-${action}`]: isLoading,
-    }))
-  }
+    }));
+  };
 
   // Check if a specific item and action is loading
   const isItemLoading = (itemId, action) => {
-    return !!loadingItemIds[`${itemId}-${action}`]
-  }
+    return !!loadingItemIds[`${itemId}-${action}`];
+  };
+
+  // Handle image load completion
+  const handleImageLoad = (itemId) => {
+    setImageLoaded((prev) => ({ ...prev, [itemId]: true }));
+  };
 
   const handleUpdateQuantity = async (itemId, change) => {
-    const item = items.find((item) => item && item._id === itemId)
-    if (!item) return
+    const item = items.find((item) => item && item._id === itemId);
+    if (!item) return;
 
-    const newQuantity = Math.max(1, item.quantity + change)
-    const action = change > 0 ? "increase" : "decrease"
+    const newQuantity = Math.max(1, item.quantity + change);
+    const action = change > 0 ? "increase" : "decrease";
 
-    setItemLoading(itemId, action, true)
+    setItemLoading(itemId, action, true);
 
     try {
-      // Update on server
       const response = await fetch(`/api/cart/${itemId}`, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          quantity: newQuantity,
-        }),
-      })
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ quantity: newQuantity }),
+      });
 
-      if (!response.ok) {
-        throw new Error("Failed to update cart")
-      }
+      if (!response.ok) throw new Error("Failed to update cart");
 
-      // Update local state
-      updateQuantity(itemId, newQuantity)
+      updateQuantity(itemId, newQuantity);
     } catch (error) {
-      console.error("Error updating cart:", error)
-      toast.error("Failed to update cart")
+      console.error("Error updating cart:", error);
+      toast.error("Failed to update cart");
     } finally {
-      setItemLoading(itemId, action, false)
+      setItemLoading(itemId, action, false);
     }
-  }
+  };
 
   const handleRemoveItem = async (itemId) => {
-    setItemLoading(itemId, "remove", true)
+    setItemLoading(itemId, "remove", true);
 
     try {
-      // Remove from server
-      const response = await fetch(`/api/cart/${itemId}`, {
-        method: "DELETE",
-      })
+      const response = await fetch(`/api/cart/${itemId}`, { method: "DELETE" });
+      if (!response.ok) throw new Error("Failed to remove item");
 
-      if (!response.ok) {
-        throw new Error("Failed to remove item")
-      }
-
-      // Remove from local state
-      removeItem(itemId)
-      toast.success("Item removed from cart")
+      removeItem(itemId);
+      toast.success("Item removed from cart");
     } catch (error) {
-      console.error("Error removing item:", error)
-      toast.error("Failed to remove item")
+      console.error("Error removing item:", error);
+      toast.error("Failed to remove item");
     } finally {
-      setItemLoading(itemId, "remove", false)
+      setItemLoading(itemId, "remove", false);
     }
-  }
+  };
 
   const handleUpdateCart = async () => {
-    setIsUpdatingCart(true)
+    setIsUpdatingCart(true);
     try {
-      await syncWithServer()
-      toast.success("Cart updated")
+      await syncWithServer();
+      toast.success("Cart updated");
     } catch (error) {
-      console.error("Error updating cart:", error)
-      toast.error("Failed to update cart")
+      console.error("Error updating cart:", error);
+      toast.error("Failed to update cart");
     } finally {
-      setIsUpdatingCart(false)
+      setIsUpdatingCart(false);
     }
-  }
+  };
 
   const handleApplyCoupon = () => {
     if (!couponCode) {
-      toast.error("Please enter a coupon code")
-      return
+      toast.error("Please enter a coupon code");
+      return;
     }
 
-    setIsApplyingCoupon(true)
-
-    // Simulate API call
+    setIsApplyingCoupon(true);
     setTimeout(() => {
-      // This would typically call an API to validate and apply the coupon
-      toast.info("Coupon functionality is not implemented yet")
-      setIsApplyingCoupon(false)
-    }, 1000)
-  }
+      toast.info("Coupon functionality is not implemented yet");
+      setIsApplyingCoupon(false);
+    }, 1000);
+  };
 
-  const subtotal = total
-  // You could add shipping calculation here
-  const shipping = 0 // Free shipping
-  const finalTotal = subtotal + shipping
+  const subtotal = total;
+  const shipping = 0; // Free shipping
+  const finalTotal = subtotal + shipping;
 
   return (
     <div className="w-full mb-20 font-inter grid gap-10">
@@ -158,15 +145,20 @@ export default function CartPage() {
                   <Card key={item._id} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 p-4">
                     <div className="flex items-center space-x-4 col-span-1 sm:col-span-2 md:col-span-1">
                       <div className="relative h-20 w-20 overflow-hidden rounded-md">
+                        {!imageLoaded[item._id] && (
+                          <div className="absolute inset-0 bg-gray-200 animate-pulse rounded-md" />
+                        )}
                         <Image
-                          src={(item.product && item.product.images && item.product.images[0]) || "/placeholder.svg"}
-                          alt={(item.product && item.product.name) || "Product"}
+                          src={(item.product?.images[1]) || "/placeholder.svg"}
+                          alt={item.product?.name || "Product"}
                           fill
-                          className="object-cover"
+                          className={`object-cover ${imageLoaded[item._id] ? "opacity-100" : "opacity-0"}`}
+                          onLoad={() => handleImageLoad(item._id)}
+                          onError={() => handleImageLoad(item._id)} // Handle broken images
                         />
                       </div>
                       <div>
-                        <h3 className="font-medium line-clamp-2">{item.product ? item.product.name : "Product"}</h3>
+                        <h3 className="font-medium line-clamp-2">{item.product?.name || "Product"}</h3>
                         <button
                           onClick={() => handleRemoveItem(item._id)}
                           disabled={isItemLoading(item._id, "remove")}
@@ -184,7 +176,7 @@ export default function CartPage() {
 
                     <div className="flex items-center justify-center">
                       <p className="font-medium">
-                        {formatCurrency(item.price || (item.product && item.product.price) || 0)}
+                        {formatCurrency(item.price || item.product?.price || 0)}
                       </p>
                     </div>
 
@@ -226,11 +218,11 @@ export default function CartPage() {
 
                     <div className="flex items-center justify-end">
                       <p className="font-semibold">
-                        {formatCurrency((item.price || (item.product && item.product.price) || 0) * item.quantity)}
+                        {formatCurrency((item.price || item.product?.price || 0) * item.quantity)}
                       </p>
                     </div>
                   </Card>
-                ),
+                )
             )
           )}
         </div>
@@ -272,8 +264,8 @@ export default function CartPage() {
                   {isApplyingCoupon ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Applying...
-                    </>
+                    Applying...
+                  </>
                   ) : (
                     "Apply Coupon"
                   )}
@@ -311,6 +303,5 @@ export default function CartPage() {
         )}
       </div>
     </div>
-  )
+  );
 }
-

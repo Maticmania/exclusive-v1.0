@@ -118,9 +118,13 @@ const productSchema = new mongoose.Schema(
       unique: true,
     },
     tags: [String],
+    isPublished : {
+      type: Boolean,
+      default: true,
+    },
     status: {
       type: String,
-      enum: ["draft", "published", "archived"],
+      enum: ["published", "archived"],
       default: "published",
     },
     warrantyInformation: {
@@ -160,8 +164,6 @@ const productSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-    toJSON: { virtuals: true },
-    toObject: { virtuals: true },
   },
 )
 

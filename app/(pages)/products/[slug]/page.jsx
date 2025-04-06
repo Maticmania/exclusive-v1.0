@@ -1,82 +1,92 @@
-import { notFound } from "next/navigation"
-import { Suspense } from "react"
-import ProductDetails from "@/components/products/product-details"
-import RelatedProducts from "@/components/products/related-products"
+import { notFound } from "next/navigation";
+import { Suspense } from "react";
+import ProductDetails from "@/components/products/product-details";
+import RelatedProducts from "@/components/products/related-products";
 
 // Helper function to get the full URL including the protocol
 function getBaseUrl() {
-  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`
-  return process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
+  return process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
 }
 
 async function getProduct(slug) {
   try {
-    const baseUrl = getBaseUrl()
+    const baseUrl = getBaseUrl();
     const res = await fetch(`${baseUrl}/api/products/${slug}`, {
       next: { revalidate: 60 }, // Revalidate every minute
-    })
+    });
 
     if (!res.ok) {
-      if (res.status === 404) return null
-      throw new Error(`Failed to fetch product: ${res.statusText}`)
+      if (res.status === 404) return null;
+      throw new Error(`Failed to fetch product: ${res.statusText}`);
     }
 
-    return res.json()
+    return res.json();
   } catch (error) {
-    console.error("Error fetching product:", error)
-    return null
+    console.error("Error fetching product:", error);
+    return null;
   }
 }
 
-async function getRelatedProducts(categoryId, currentProductSlug) {
+async function getRelatedProducts(categorySlug, currentProductSlug) {
   try {
-    if (!categoryId) return []
+    if (!categorySlug) return [];
 
-    const baseUrl = getBaseUrl()
-    const res = await fetch(`${baseUrl}/api/products?category=${categoryId}&exclude=${currentProductSlug}&limit=4`, {
-      next: { revalidate: 60 }, // Revalidate every minute
-    })
+    const baseUrl = getBaseUrl();
+    // Note: Your current /api/products doesn't support 'exclude', so we'll fetch and filter client-side
+    const res = await fetch(
+      `${baseUrl}/api/products?category=${categorySlug}&limit=5`, // Get 5, filter to 4 after excluding current
+      {
+        next: { revalidate: 60 }, // Revalidate every minute
+      }
+    );
 
     if (!res.ok) {
-      throw new Error(`Failed to fetch related products: ${res.statusText}`)
+      throw new Error(`Failed to fetch related products: ${res.statusText}`);
     }
 
-    const data = await res.json()
-    return data.products || []
+    const data = await res.json();
+    // Filter out the current product
+    const related = (data.products || []).filter(
+      (p) => p.slug !== currentProductSlug
+    );
+    return related.slice(0, 4); // Return up to 4 related products
   } catch (error) {
-    console.error("Error fetching related products:", error)
-    return []
+    console.error("Error fetching related products:", error);
+    return [];
   }
 }
 
 export async function generateMetadata({ params }) {
-  const { slug } = await params;
-  const product = await getProduct(slug)
+  const { slug } = params; // Correct destructuring
+  const product = await getProduct(slug);
 
   if (!product) {
     return {
       title: "Product Not Found | Exclusive",
       description: "The requested product could not be found",
-    }
+    };
   }
 
   return {
     title: `${product.name} | Exclusive`,
-    description: product.description,
-  }
+    description: product.description || "View this exclusive product",
+  };
 }
 
-export default async function ProductPage({ params: { slug } }) {
-  const product = await getProduct(slug)
+export default async function ProductPage({ params }) {
+  const { slug } = params; // Correct destructuring
+  const product = await getProduct(slug);
 
   if (!product) {
-    notFound()
+    notFound();
   }
 
-  // Get the category ID for related products
-  const categoryId = product.category && typeof product.category === "object" ? product.category._id : product.category
+  // Use category slug from product for related products
+  const categorySlug = product.category?.slug;
+  console.log("Category slug:", categorySlug);
 
-  const relatedProducts = await getRelatedProducts(categoryId, slug)
+  const relatedProducts = await getRelatedProducts(categorySlug, slug);
 
   return (
     <div className="container max-w-screen-xl mx-auto">
@@ -94,6 +104,5 @@ export default async function ProductPage({ params: { slug } }) {
         </Suspense>
       </div>
     </div>
-  )
+  );
 }
-

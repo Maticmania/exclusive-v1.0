@@ -1,51 +1,63 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import ProductCard from "./product-card";
 import { useWishlistStore, useCartStore } from "@/store/auth-store";
+import Pagination from "./pagination";
+import ProductSort from "./product-sort";
 
-export default function ProductList() {
-  const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
-
+export default function ProductList({ initialProducts = [], initialPagination = null }) {
+  const [products, setProducts] = useState(initialProducts);
+  const [loading, setLoading] = useState(initialProducts.length === 0);
+  const [pagination, setPagination] = useState(
+    initialPagination || {
+      total: 0,
+      page: 1,
+      limit: 12,
+      pages: 1,
+    }
+  );
+  const searchParams = useSearchParams();
   const { syncWithServer: syncWishlist } = useWishlistStore();
   const { syncWithServer: syncCart } = useCartStore();
 
-  // Memoize sync functions to prevent unnecessary re-renders
-  const syncData = useCallback(() => {
+  useEffect(() => {
+    // Sync wishlist and cart with server
     syncWishlist();
     syncCart();
-  }, [syncWishlist, syncCart]);
 
-  useEffect(() => {
-    syncData(); // Sync wishlist & cart
-
-    const fetchProducts = async () => {
-      try {
-        const response = await fetch("/api/products");
-
-        if (!response.ok) throw new Error("Failed to fetch products");
-
-        const data = await response.json();
-
-        if (!data.products || data.products.length === 0) {
-          throw new Error("No products available");
-        }
-
-        setProducts(data.products);
-      } catch (error) {
-        console.error("Error fetching products:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
+    // Fetch products whenever searchParams change
     fetchProducts();
-  }, []); // Depend on `syncData` to avoid re-fetching unnecessarily
+  }, [searchParams, syncWishlist, syncCart]);
+
+  const fetchProducts = async () => {
+    try {
+      setLoading(true);
+      const queryString = searchParams.toString();
+      const response = await fetch(`/api/products?${queryString}`, {
+        cache: "no-store", // Ensure fresh data
+      });
+
+      if (!response.ok) throw new Error("Failed to fetch products");
+
+      const data = await response.json();
+      setProducts(data.products || []);
+      setPagination(
+        data.pagination || { total: 0, page: 1, limit: 12, pages: 1 }
+      );
+    } catch (error) {
+      console.error("Error fetching products:", error);
+      setProducts([]);
+      setPagination({ total: 0, page: 1, limit: 12, pages: 1 });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (loading) {
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
         {[...Array(8)].map((_, i) => (
           <div key={i} className="border rounded-lg overflow-hidden">
             <div className="h-48 bg-gray-200 animate-pulse" />
@@ -73,10 +85,27 @@ export default function ProductList() {
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-      {products.map((product) => (
-        <ProductCard key={product._id} product={product} />
-      ))}
+    <div className="space-y-8">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <p className="text-sm text-muted-foreground">
+          Showing {products.length} of {pagination.total} products
+        </p>
+        <ProductSort />
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        {products.map((product) => (
+          <ProductCard key={product._id} product={product} />
+        ))}
+      </div>
+
+      {pagination.pages > 1 && (
+        <Pagination
+          currentPage={pagination.page}
+          totalPages={pagination.pages}
+          totalItems={pagination.total}
+        />
+      )}
     </div>
   );
 }
