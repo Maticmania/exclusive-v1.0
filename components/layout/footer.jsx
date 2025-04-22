@@ -17,7 +17,7 @@ export default function Footer() {
                 placeholder="Your email"
                 className="px-4 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-primary"
               />
-              <button className="bg-white text-primary px-4 py-2 rounded-r-md hover:bg-white/90">Subscribe</button>
+              {/* <button className="bg-white text-primary px-4 py-2 rounded-r-md hover:bg-white/90">Subscribe</button> */}
             </div>
           </div>
 
