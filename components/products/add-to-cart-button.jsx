@@ -73,7 +73,7 @@ export default function AddToCartButton({
       }
 
       setIsInCart(true);
-
+      
       if (!buyNow) {
         toast.success("Added to cart", {
           description: `${product.name} has been added to your cart.`,

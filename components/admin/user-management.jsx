@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useAuthStore } from "@/store/auth-store";
 import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
 
 export default function UserManagement() {
   const [users, setUsers] = useState([]);
@@ -61,22 +62,23 @@ export default function UserManagement() {
       toast.success("User role updated successfully");
     } catch (error) {
       console.error("Error updating user role:", error);
-      toast({
-        title: "Error",
+      toast("Error", {
         description: error.message,
-        variant: "destructive",
       });
     }
   };
 
   if (loading) {
-    return <div className="text-center py-4">Loading users...</div>;
+    return (
+      <div className="flex flex-col items-center justify-center h-64">
+        <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+        <p className="text-lg text-muted-foreground">Loading users...</p>
+      </div>
+    );
   }
 
   return (
     <div className="space-y-6">
-      <h2 className="text-xl font-bold">User Management</h2>
-
       <div className="border rounded-md">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">

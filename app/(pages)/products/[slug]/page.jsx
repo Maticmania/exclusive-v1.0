@@ -35,7 +35,7 @@ async function getRelatedProducts(categorySlug, currentProductSlug) {
     const baseUrl = getBaseUrl();
     // Note: Your current /api/products doesn't support 'exclude', so we'll fetch and filter client-side
     const res = await fetch(
-      `${baseUrl}/api/products?category=${categorySlug}&limit=5`, // Get 5, filter to 4 after excluding current
+      `${baseUrl}/api/products?category=${categorySlug}&limit=10`, // Get 5, filter to 4 after excluding current
       {
         next: { revalidate: 60 }, // Revalidate every minute
       }
@@ -50,7 +50,7 @@ async function getRelatedProducts(categorySlug, currentProductSlug) {
     const related = (data.products || []).filter(
       (p) => p.slug !== currentProductSlug
     );
-    return related.slice(0, 4); // Return up to 4 related products
+    return related.slice(0, 10); // Return up to 4 related products
   } catch (error) {
     console.error("Error fetching related products:", error);
     return [];
@@ -89,13 +89,16 @@ export default async function ProductPage({ params }) {
   const relatedProducts = await getRelatedProducts(categorySlug, slug);
 
   return (
-    <div className="container max-w-screen-xl mx-auto">
+    <div className="container max-w-screen-xl mx-auto px-[5%] md:px-0">
       <ProductDetails product={product} />
 
       <div className="mt-20">
         <div className="flex justify-between items-center mb-6">
+          <div className="flex items-center gap-2">
+          <div className="h-8 w-3 bg-primary rounded"></div>
           <h2 className="text-2xl font-bold">Related Items</h2>
-          <a href="/products" className="text-primary hover:underline">
+          </div>
+          <a href={`/products?category=${categorySlug}&page=1`} className="hover:underline bg-primary p-2 px-4 rounded-lg text-white">
             See All
           </a>
         </div>

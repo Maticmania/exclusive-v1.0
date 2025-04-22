@@ -5,12 +5,10 @@ import { persist } from "zustand/middleware"
 export const useAuthStore = create(
   persist(
     (set, get) => ({
-      // User state
       user: null,
       isAuthenticated: false,
       isLoading: true,
 
-      // Set user data
       setUser: (userData) =>
         set({
           user: userData,
@@ -18,7 +16,6 @@ export const useAuthStore = create(
           isLoading: false,
         }),
 
-      // Clear user data on logout
       clearUser: () =>
         set({
           user: null,
@@ -26,21 +23,15 @@ export const useAuthStore = create(
           isLoading: false,
         }),
 
-      // Set loading state
       setLoading: (isLoading) => set({ isLoading }),
 
-      // Role checking functions
       hasRole: (requiredRoles) => {
         const { user } = get()
         if (!user || !user.role) return false
-
-        // Convert to array if single role is provided
         const roles = Array.isArray(requiredRoles) ? requiredRoles : [requiredRoles]
-
         return roles.includes(user.role)
       },
 
-      // Role checking functions
       isAdmin: () => {
         const { hasRole } = get()
         return hasRole(["admin", "superadmin"])
@@ -52,8 +43,8 @@ export const useAuthStore = create(
       },
     }),
     {
-      name: "auth-storage", // name of the item in storage
-      partialize: (state) => ({ user: state.user }), // only store user data
+      name: "auth-storage",
+      partialize: (state) => ({ user: state.user }),
     },
   ),
 )
@@ -66,9 +57,7 @@ export const useCartStore = create(
       total: 0,
       isLoading: false,
 
-      // Add item to cart
       addItem: (product, quantity = 1, variantId = null) => {
-        // Check if product is valid
         if (!product || !product._id) {
           console.error("Invalid product data:", product)
           return
@@ -83,7 +72,6 @@ export const useCartStore = create(
         )
 
         if (existingItem) {
-          // Update quantity if item exists
           const updatedItems = items.map((item) =>
             item.product &&
             item.product._id === product._id &&
@@ -97,7 +85,6 @@ export const useCartStore = create(
             total: calculateTotal(updatedItems),
           })
         } else {
-          // Add new item
           const newItem = {
             product,
             quantity,
@@ -115,7 +102,6 @@ export const useCartStore = create(
         }
       },
 
-      // Update item quantity
       updateQuantity: (itemId, quantity) => {
         const { items } = get()
         const updatedItems = items.map((item) => (item._id === itemId ? { ...item, quantity } : item))
@@ -126,7 +112,6 @@ export const useCartStore = create(
         })
       },
 
-      // Remove item from cart
       removeItem: (itemId) => {
         const { items } = get()
         const updatedItems = items.filter((item) => item._id !== itemId)
@@ -137,21 +122,30 @@ export const useCartStore = create(
         })
       },
 
-      // Clear cart
       clearCart: () => set({ items: [], total: 0 }),
 
-      // Set loading state
       setLoading: (isLoading) => set({ isLoading }),
 
-      // Sync cart with server
       syncWithServer: async () => {
+        const { isAuthenticated } = useAuthStore.getState()
+        
+        if (!isAuthenticated) {
+          // Reset cart if user is not authenticated
+          set({ items: [], total: 0, isLoading: false })
+          return
+        }
+
         try {
           set({ isLoading: true })
-          const response = await fetch("/api/cart")
-          if (!response.ok) throw new Error("Failed to fetch cart")
-
+          const response = await fetch("/api/cart", {
+            credentials: 'include', // Important for NextAuth session
+          })
+          
+          if (!response.ok) {
+            throw new Error("Failed to fetch cart")
+          }
+          
           const data = await response.json()
-
           set({
             items: data.items || [],
             total: data.total || 0,
@@ -170,8 +164,6 @@ export const useCartStore = create(
   ),
 )
 
-// Update the calculateTotal function to handle null values
-
 // Helper function to calculate total
 function calculateTotal(items) {
   return items.reduce((sum, item) => {
@@ -187,7 +179,6 @@ export const useWishlistStore = create(
     (set, get) => ({
       products: [],
 
-      // Add product to wishlist
       addProduct: (product) => {
         const { products } = get()
         if (!products.some((p) => p._id === product._id)) {
@@ -195,28 +186,37 @@ export const useWishlistStore = create(
         }
       },
 
-      // Remove product from wishlist
       removeProduct: (productId) => {
         const { products } = get()
         set({ products: products.filter((p) => p._id !== productId) })
       },
 
-      // Check if product is in wishlist
       isInWishlist: (productId) => {
         const { products } = get()
         return products.some((p) => p._id === productId)
       },
 
-      // Sync wishlist with server
       syncWithServer: async () => {
+        const { isAuthenticated } = useAuthStore.getState()
+        
+        if (!isAuthenticated) {
+          // Reset wishlist if user is not authenticated
+          set({ products: [] })
+          return
+        }
+
         try {
-          const response = await fetch("/api/wishlist")
-          if (!response.ok) throw new Error("Failed to fetch wishlist")
+          const response = await fetch("/api/wishlist", {
+            credentials: 'include', // Important for NextAuth session
+          })
+          
+          if (!response.ok) {
+            throw new Error("Failed to fetch wishlist")
+          }
 
           const data = await response.json()
-
           set({
-            products: data.products,
+            products: data.products || [],
           })
         } catch (error) {
           console.error("Error syncing wishlist:", error)
@@ -229,4 +229,3 @@ export const useWishlistStore = create(
     },
   ),
 )
-

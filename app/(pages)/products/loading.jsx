@@ -67,8 +67,8 @@ export default function ProductsLoading() {
           </div>
 
           {/* Products grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {[...Array(12)].map((_, i) => (
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {[...Array(4)].map((_, i) => (
               <div key={`product-${i}`} className="border rounded-lg overflow-hidden shadow-sm animate-pulse">
                 {/* Product image skeleton */}
                 <div className="aspect-square bg-gray-200"></div>

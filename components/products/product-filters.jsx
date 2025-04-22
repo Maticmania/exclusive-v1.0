@@ -1,118 +1,230 @@
-"use client";
+"use client"
 
-import { useState, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { Slider } from "@/components/ui/slider";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { SlidersHorizontal } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { useState, useEffect, useRef } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
+import { Slider } from "@/components/ui/slider"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Label } from "@/components/ui/label"
+import { Button } from "@/components/ui/button"
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { SlidersHorizontal } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+
+// Cache for categories and brands
+let categoriesCache = null
+let brandsCache = null
 
 export default function ProductFilters() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const isInitialMount = useRef(true)
+  const lastAppliedFilters = useRef({
+    categories: [],
+    brands: [],
+    priceRange: [0, 10000],
+  })
 
   // Get current filter values from URL
-  const currentCategory = searchParams.get("category");
-  const currentBrands = searchParams.get("brands")?.split(",").filter(Boolean) || []; // Fixed typo: "bands" -> "brands"
-  const minPrice = Number(searchParams.get("minPrice") || 0);
-  const maxPrice = Number(searchParams.get("maxPrice") || 10000);
+  const currentCategory = searchParams.get("category")
+  const currentBrands = searchParams.get("brands")?.split(",").filter(Boolean) || []
+  const minPrice = Number(searchParams.get("minPrice") || 0)
+  const maxPrice = Number(searchParams.get("maxPrice") || 10000)
 
   // Local state for filters and fetched data
-  const [priceRange, setPriceRange] = useState([minPrice, maxPrice]);
-  const [selectedCategories, setSelectedCategories] = useState(currentCategory ? [currentCategory] : []);
-  const [selectedBrands, setSelectedBrands] = useState(currentBrands);
-  const [categories, setCategories] = useState([]);
-  const [brands, setBrands] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [isOpen, setIsOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState("categories");
+  const [priceRange, setPriceRange] = useState([minPrice, maxPrice])
+  const [selectedCategories, setSelectedCategories] = useState(currentCategory ? [currentCategory] : [])
+  const [selectedBrands, setSelectedBrands] = useState(currentBrands)
+  const [categories, setCategories] = useState(categoriesCache || [])
+  const [brands, setBrands] = useState(brandsCache || [])
+  const [loading, setLoading] = useState(!categoriesCache || !brandsCache)
+  const [error, setError] = useState(null)
+  const [isOpen, setIsOpen] = useState(false)
+  const [activeTab, setActiveTab] = useState("categories")
+  const [applyingFilters, setApplyingFilters] = useState(false)
 
   // Count active filters for mobile badge
   const activeFilterCount =
     (selectedCategories.length > 0 ? 1 : 0) +
     selectedBrands.length +
-    (priceRange[0] > 0 || priceRange[1] < 10000 ? 1 : 0);
+    (priceRange[0] > 0 || priceRange[1] < 10000 ? 1 : 0)
 
-  // Fetch categories and brands on mount
+  // Fetch categories and brands only once and cache them
   useEffect(() => {
+    // Skip fetching if we already have cached data
+    if (categoriesCache && brandsCache) {
+      setCategories(categoriesCache)
+      setBrands(brandsCache)
+      setLoading(false)
+      return
+    }
+
     const fetchData = async () => {
       try {
-        setLoading(true);
-        const catResponse = await fetch("/api/admin/categories", { cache: "no-store" });
-        if (!catResponse.ok) throw new Error("Failed to fetch categories");
-        const catData = await catResponse.json();
-        setCategories(catData);
+        setLoading(true)
 
-        const brandResponse = await fetch("/api/admin/brands", { cache: "no-store" });
-        if (!brandResponse.ok) throw new Error("Failed to fetch brands");
-        const brandData = await brandResponse.json();
-        setBrands(brandData);
+        // Use Promise.all to fetch both in parallel
+        const [catResponse, brandResponse] = await Promise.all([
+          fetch("/api/admin/categories", {
+            cache: "force-cache",
+            next: { revalidate: 3600 }, // Cache for 1 hour
+          }),
+          fetch("/api/admin/brands", {
+            cache: "force-cache",
+            next: { revalidate: 3600 },
+          }),
+        ])
+
+        if (!catResponse.ok) throw new Error("Failed to fetch categories")
+        if (!brandResponse.ok) throw new Error("Failed to fetch brands")
+
+        const [catData, brandData] = await Promise.all([catResponse.json(), brandResponse.json()])
+
+        // Process and normalize the data
+        const processedCategories = Array.isArray(catData) ? catData : catData.categories || catData.data || []
+
+        const processedBrands = Array.isArray(brandData) ? brandData : brandData.brands || brandData.data || []
+
+        // Update the cache
+        categoriesCache = processedCategories
+        brandsCache = processedBrands
+
+        // Update state
+        setCategories(processedCategories)
+        setBrands(processedBrands)
       } catch (err) {
-        setError(err.message);
+        console.error("Error fetching filters:", err)
+        setError(err.message)
       } finally {
-        setLoading(false);
+        setLoading(false)
       }
-    };
-    fetchData();
-  }, []);
+    }
 
-  // Sync state with URL changes
+    fetchData()
+  }, [])
+
+  // Sync state with URL changes, but only when URL changes from external sources
   useEffect(() => {
-    setPriceRange([minPrice, maxPrice]);
-    setSelectedCategories(currentCategory ? [currentCategory] : []);
-    setSelectedBrands(currentBrands);
-  }, [searchParams]);
+    if (isInitialMount.current) {
+      isInitialMount.current = false
+      return
+    }
 
-  // Handle category selection (using slug)
-  const handleCategoryChange = (slug) => {
-    const newCategories = selectedCategories.includes(slug)
-      ? selectedCategories.filter((c) => c !== slug)
-      : [slug];
-    setSelectedCategories(newCategories);
-    applyFilters(newCategories, selectedBrands, priceRange);
-  };
+    // Only update if we're not currently applying filters
+    if (!applyingFilters) {
+      const newPriceRange = [Number(searchParams.get("minPrice") || 0), Number(searchParams.get("maxPrice") || 10000)]
+      const newCategories = currentCategory ? [currentCategory] : []
 
-  // Handle brand selection (using slug)
-  const handleBrandChange = (slug) => {
-    const newBrands = selectedBrands.includes(slug)
-      ? selectedBrands.filter((b) => b !== slug)
-      : [...selectedBrands, slug];
-    setSelectedBrands(newBrands);
-    applyFilters(selectedCategories, newBrands, priceRange);
-  };
+      // Use functional updates to avoid stale state issues
+      setPriceRange((prev) => (JSON.stringify(prev) !== JSON.stringify(newPriceRange) ? newPriceRange : prev))
 
-  // Handle price range change and apply immediately
-  const handlePriceRangeChange = (newRange) => {
-    setPriceRange(newRange);
-    applyFilters(selectedCategories, selectedBrands, newRange);
-  };
+      setSelectedCategories((prev) => (JSON.stringify(prev) !== JSON.stringify(newCategories) ? newCategories : prev))
 
-  // Apply filters to URL
+      setSelectedBrands((prev) => (JSON.stringify(prev) !== JSON.stringify(currentBrands) ? currentBrands : prev))
+    }
+  }, [searchParams, currentCategory, currentBrands, applyingFilters])
+
+  // Apply filters to URL with debounce
   const applyFilters = (categories = selectedCategories, brands = selectedBrands, range = priceRange) => {
-    const params = new URLSearchParams();
-    if (categories.length > 0) params.set("category", categories[0]);
-    if (brands.length > 0) params.set("brands", brands.join(","));
-    if (range[0] > 0) params.set("minPrice", range[0]);
-    if (range[1] < 10000) params.set("maxPrice", range[1]);
-    params.set("page", "1");
-    router.push(`/products?${params.toString()}`, { scroll: false });
-  };
+    // Prevent duplicate filter applications
+    if (
+      JSON.stringify(categories) === JSON.stringify(lastAppliedFilters.current.categories) &&
+      JSON.stringify(brands) === JSON.stringify(lastAppliedFilters.current.brands) &&
+      JSON.stringify(range) === JSON.stringify(lastAppliedFilters.current.priceRange) &&
+      !isInitialMount.current
+    ) {
+      return
+    }
+
+    // Update last applied filters
+    lastAppliedFilters.current = {
+      categories,
+      brands,
+      priceRange: range,
+    }
+
+    // Prevent multiple rapid filter applications
+    if (applyingFilters) return
+    setApplyingFilters(true)
+
+    // Build the query params
+    const params = new URLSearchParams(searchParams.toString())
+
+    // Handle category (only one at a time for now)
+    if (categories.length > 0) {
+      params.set("category", categories[0])
+    } else {
+      params.delete("category")
+    }
+
+    // Handle brands
+    if (brands.length > 0) {
+      params.set("brands", brands.join(","))
+    } else {
+      params.delete("brands")
+    }
+
+    // Handle price range
+    if (range[0] > 0) {
+      params.set("minPrice", range[0].toString())
+    } else {
+      params.delete("minPrice")
+    }
+
+    if (range[1] < 10000) {
+      params.set("maxPrice", range[1].toString())
+    } else {
+      params.delete("maxPrice")
+    }
+
+    // Reset to page 1 when filters change
+    params.set("page", "1")
+
+    // Update URL
+    router.push(`/products?${params.toString()}`, { scroll: false })
+    setIsOpen(false)
+
+    // Allow new filter applications after a delay
+    setTimeout(() => {
+      setApplyingFilters(false)
+    }, 300)
+  }
+
+  // Handle category selection
+  const handleCategoryChange = (slug) => {
+    // For now, we only support one category at a time
+    setSelectedCategories((prev) => {
+      const newCategories = prev.includes(slug) ? [] : [slug]
+      return JSON.stringify(prev) !== JSON.stringify(newCategories) ? newCategories : prev
+    })
+  }
+
+  // Handle brand selection
+  const handleBrandChange = (slug) => {
+    setSelectedBrands((prev) => {
+      const newBrands = prev.includes(slug) ? prev.filter((b) => b !== slug) : [...prev, slug]
+      return JSON.stringify(prev) !== JSON.stringify(newBrands) ? newBrands : prev
+    })
+  }
 
   // Reset filters
   const resetFilters = () => {
-    setSelectedCategories([]);
-    setSelectedBrands([]);
-    setPriceRange([0, 10000]);
-    router.push("/products", { scroll: false });
-    setIsOpen(false);
-  };
+    setSelectedCategories([])
+    setSelectedBrands([])
+    setPriceRange([0, 10000])
+
+    // Update last applied filters
+    lastAppliedFilters.current = {
+      categories: [],
+      brands: [],
+      priceRange: [0, 10000],
+    }
+
+    router.push("/products", { scroll: false })
+    setIsOpen(false)
+  }
 
   // Skeleton loading component
   const SkeletonFilterItem = () => (
@@ -120,13 +232,12 @@ export default function ProductFilters() {
       <div className="w-5 h-5 bg-gray-200 rounded" />
       <div className="w-32 h-4 bg-gray-200 rounded" />
     </div>
-  );
+  )
 
   if (error) {
-    return <div className="p-4 text-red-500">Error loading filters: {error}</div>;
+    return <div className="p-4 text-red-500">Error loading filters: {error}</div>
   }
 
-  // Desktop Filters (Accordion)
   const DesktopFilters = () => (
     <div className="bg-white p-4 rounded-lg shadow-sm hidden md:block">
       <h2 className="text-lg font-semibold mb-4">Filters</h2>
@@ -149,7 +260,8 @@ export default function ProductFilters() {
                   min={0}
                   max={10000}
                   step={10}
-                  onValueChange={handlePriceRangeChange}
+                  onValueChange={setPriceRange}
+                  onValueCommit={() => applyFilters(selectedCategories, selectedBrands, priceRange)}
                 />
                 <div className="flex items-center justify-between">
                   <span>${priceRange[0]}</span>
@@ -165,18 +277,24 @@ export default function ProductFilters() {
           <AccordionContent>
             <div className="space-y-2">
               {loading
-                ? Array(4).fill(0).map((_, i) => <SkeletonFilterItem key={i} />)
+                ? Array(4)
+                    .fill(0)
+                    .map((_, i) => <SkeletonFilterItem key={i} />)
                 : categories.map((category) => (
-                    <div key={category.slug} className="flex items-center space-x-2">
+                    <div key={category._id || category.id || category.slug} className="flex items-center space-x-2">
                       <Checkbox
                         id={`category-${category.slug}`}
                         checked={selectedCategories.includes(category.slug)}
-                        onCheckedChange={() => handleCategoryChange(category.slug)}
+                        onCheckedChange={() => {
+                          handleCategoryChange(category.slug)
+                          applyFilters(
+                            selectedCategories.includes(category.slug) ? [] : [category.slug],
+                            selectedBrands,
+                            priceRange,
+                          )
+                        }}
                       />
-                      <Label
-                        htmlFor={`category-${category.slug}`}
-                        className="text-sm font-normal cursor-pointer"
-                      >
+                      <Label htmlFor={`category-${category.slug}`} className="text-sm font-normal cursor-pointer">
                         {category.name}
                       </Label>
                     </div>
@@ -190,18 +308,23 @@ export default function ProductFilters() {
           <AccordionContent>
             <div className="space-y-2">
               {loading
-                ? Array(4).fill(0).map((_, i) => <SkeletonFilterItem key={i} />)
+                ? Array(4)
+                    .fill(0)
+                    .map((_, i) => <SkeletonFilterItem key={i} />)
                 : brands.map((brand) => (
-                    <div key={brand.slug} className="flex items-center space-x-2">
+                    <div key={brand._id || brand.id || brand.slug} className="flex items-center space-x-2">
                       <Checkbox
                         id={`brand-${brand.slug}`}
                         checked={selectedBrands.includes(brand.slug)}
-                        onCheckedChange={() => handleBrandChange(brand.slug)}
+                        onCheckedChange={() => {
+                          const newBrands = selectedBrands.includes(brand.slug)
+                            ? selectedBrands.filter((b) => b !== brand.slug)
+                            : [...selectedBrands, brand.slug]
+                          handleBrandChange(brand.slug)
+                          applyFilters(selectedCategories, newBrands, priceRange)
+                        }}
                       />
-                      <Label
-                        htmlFor={`brand-${brand.slug}`}
-                        className="text-sm font-normal cursor-pointer"
-                      >
+                      <Label htmlFor={`brand-${brand.slug}`} className="text-sm font-normal cursor-pointer">
                         {brand.name}
                       </Label>
                     </div>
@@ -211,14 +334,11 @@ export default function ProductFilters() {
         </AccordionItem>
       </Accordion>
     </div>
-  );
+  )
 
   return (
     <>
-      {/* Desktop Filters */}
       <DesktopFilters />
-
-      {/* Mobile Filters */}
       <div className="md:hidden px-4">
         <Sheet open={isOpen} onOpenChange={setIsOpen}>
           <SheetTrigger asChild>
@@ -235,16 +355,11 @@ export default function ProductFilters() {
             </Button>
           </SheetTrigger>
           <SheetContent side="bottom" className="p-0 h-[80vh] flex flex-col overflow-hidden">
-          <SheetHeader className="px-4 pt-4 pb-2">
+            <SheetHeader className="px-4 pt-4 pb-2">
               <SheetTitle className="flex justify-between items-center">
                 <span className="text-lg font-semibold">Filters</span>
                 {activeFilterCount > 0 && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={resetFilters}
-                    className="text-sm hover:text-destructive"
-                  >
+                  <Button variant="ghost" size="sm" onClick={resetFilters} className="text-sm hover:text-destructive">
                     Clear All
                   </Button>
                 )}
@@ -252,7 +367,7 @@ export default function ProductFilters() {
             </SheetHeader>
 
             <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
-            <TabsList className="grid grid-cols-3 px-4 bg-gray-50">
+              <TabsList className="grid grid-cols-3 px-4 bg-gray-50">
                 <TabsTrigger value="categories" className="flex items-center justify-center py-2">
                   Categories
                   {selectedCategories.length > 0 && (
@@ -280,12 +395,17 @@ export default function ProductFilters() {
               </TabsList>
 
               <ScrollArea className="grow overflow-y-auto px-4 py-4">
-              <TabsContent value="categories" className="mt-0 min-h-[200px]">
+                <TabsContent value="categories" className="mt-0 min-h-[200px]">
                   <div className="space-y-3">
                     {loading
-                      ? Array(8).fill(0).map((_, i) => <SkeletonFilterItem key={i} />)
+                      ? Array(8)
+                          .fill(0)
+                          .map((_, i) => <SkeletonFilterItem key={i} />)
                       : categories.map((category) => (
-                          <div key={category.slug} className="flex items-center space-x-2">
+                          <div
+                            key={category._id || category.id || category.slug}
+                            className="flex items-center space-x-2"
+                          >
                             <Checkbox
                               id={`mobile-category-${category.slug}`}
                               checked={selectedCategories.includes(category.slug)}
@@ -305,9 +425,11 @@ export default function ProductFilters() {
                 <TabsContent value="brands" className="mt-0 min-h-[200px]">
                   <div className="space-y-3">
                     {loading
-                      ? Array(8).fill(0).map((_, i) => <SkeletonFilterItem key={i} />)
+                      ? Array(8)
+                          .fill(0)
+                          .map((_, i) => <SkeletonFilterItem key={i} />)
                       : brands.map((brand) => (
-                          <div key={brand.slug} className="flex items-center space-x-2">
+                          <div key={brand._id || brand.id || brand.slug} className="flex items-center space-x-2">
                             <Checkbox
                               id={`mobile-brand-${brand.slug}`}
                               checked={selectedBrands.includes(brand.slug)}
@@ -326,13 +448,7 @@ export default function ProductFilters() {
 
                 <TabsContent value="price" className="mt-0 min-h-[200px]">
                   <div className="space-y-4 py-2">
-                    <Slider
-                      value={priceRange}
-                      min={0}
-                      max={10000}
-                      step={10}
-                      onValueChange={handlePriceRangeChange}
-                    />
+                    <Slider value={priceRange} min={0} max={10000} step={10} onValueChange={setPriceRange} />
                     <div className="flex justify-between text-sm text-gray-600">
                       <span>${priceRange[0]}</span>
                       <span>${priceRange[1]}</span>
@@ -343,8 +459,12 @@ export default function ProductFilters() {
 
               <div className="px-4 py-4 border-t bg-white">
                 <div className="flex gap-2">
-                  <Button onClick={applyFilters} className="flex-1">
-                    Apply Filters
+                  <Button
+                    onClick={() => applyFilters(selectedCategories, selectedBrands, priceRange)}
+                    className="flex-1"
+                    disabled={applyingFilters}
+                  >
+                    {applyingFilters ? "Applying..." : "Apply Filters"}
                   </Button>
                   <Button onClick={() => setIsOpen(false)} variant="outline" className="flex-1">
                     Cancel
@@ -356,5 +476,5 @@ export default function ProductFilters() {
         </Sheet>
       </div>
     </>
-  );
+  )
 }

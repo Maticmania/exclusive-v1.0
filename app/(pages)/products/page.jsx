@@ -2,151 +2,47 @@ import { Suspense } from "react"
 import ProductList from "@/components/products/product-list"
 import ProductFilters from "@/components/products/product-filters"
 import { Breadcrumb } from "@/components/ui/breadcrumb"
-import {connectToDatabase} from "@/lib/mongodb"
-import Product from "@/models/product"
-import Category from "@/models/category"
-import Brand from "@/models/brand"
 
 export const metadata = {
   title: "Products | Exclusive",
   description: "Browse our exclusive collection of products",
 }
 
-// Function to serialize MongoDB data
-function serializeMongoData(data) {
-  if (data === null || data === undefined) {
-    return data
-  }
+// Function to build API URL with search params
+function buildApiUrl(searchParams) {
+  const baseUrl = `${process.env.NEXT_PUBLIC_BASE_URL || ""}/api/products`
+  const url = new URL(baseUrl, "http://localhost:3000")
 
-  if (data instanceof Date) {
-    return data.toISOString()
-  }
-
-  if (Array.isArray(data)) {
-    return data.map((item) => serializeMongoData(item))
-  }
-
-  if (data && typeof data === "object" && data.constructor && data.constructor.name === "ObjectId") {
-    return data.toString()
-  }
-
-  if (data && typeof data === "object" && !Array.isArray(data)) {
-    const result = {}
-    for (const [key, value] of Object.entries(data)) {
-      if (typeof value !== "function") {
-        result[key] = serializeMongoData(value)
-      }
+  // Add all search params to the URL
+  Object.entries(searchParams).forEach(([key, value]) => {
+    if (value) {
+      url.searchParams.append(key, value)
     }
-    return result
-  }
+  })
 
-  return data
+  return url.toString()
 }
 
-// Update the getProducts function to handle pagination and all filters
+// Fetch products from API with caching
 async function getProducts(searchParams) {
-  await connectToDatabase()
+  try {
+    const apiUrl = buildApiUrl(searchParams)
 
-  const query = {}
-  const page = Number(searchParams.page) || 1
-  const limit = Number(searchParams.limit) || 12
-  const skip = (page - 1) * limit
+    // Use Next.js cache with revalidation
+    const response = await fetch(apiUrl, {
+      next: {
+        revalidate: 300, // Cache for 5 minutes
+      },
+    })
 
-  // Filter by category slug
-  if (searchParams.category) {
-    // Find category by slug
-    const category = await Category.findOne({ slug: searchParams.category }).lean()
-    if (category) {
-      query.category = category._id
+    if (!response.ok) {
+      throw new Error(`Failed to fetch products: ${response.status}`)
     }
-  }
 
-  // Filter by brand
-  if (searchParams.brand) {
-    // Find brand by slug
-    const brand = await Brand.findOne({ slug: searchParams.brand }).lean()
-    if (brand) {
-      query.brand = brand._id
-    }
-  } else if (searchParams.brands) {
-    const brandSlugs = searchParams.brands.split(",")
-    if (brandSlugs.length > 0) {
-      const brands = await Brand.find({ slug: { $in: brandSlugs } }).lean()
-      if (brands.length > 0) {
-        query.brand = { $in: brands.map((b) => b._id) }
-      }
-    }
-  }
-
-  // Filter by price range
-  if (searchParams.minPrice || searchParams.maxPrice) {
-    query.price = {}
-    if (searchParams.minPrice) {
-      query.price.$gte = Number.parseFloat(searchParams.minPrice)
-    }
-    if (searchParams.maxPrice) {
-      query.price.$lte = Number.parseFloat(searchParams.maxPrice)
-    }
-  }
-
-  // Featured products
-  if (searchParams.featured === "true") {
-    query.featured = true
-  }
-
-  // Search by name or description
-  if (searchParams.search) {
-    query.$or = [
-      { name: { $regex: searchParams.search, $options: "i" } },
-      { description: { $regex: searchParams.search, $options: "i" } },
-    ]
-  }
-
-  // Only show published products
-  query.isPublished = true
-
-  // Sort options
-  let sortOptions = { createdAt: -1 }
-  if (searchParams.sort) {
-    switch (searchParams.sort) {
-      case "price-asc":
-        sortOptions = { price: 1 }
-        break
-      case "price-desc":
-        sortOptions = { price: -1 }
-        break
-      case "name-asc":
-        sortOptions = { name: 1 }
-        break
-      case "name-desc":
-        sortOptions = { name: -1 }
-        break
-    }
-  }
-
-  // Get total count for pagination
-  const total = await Product.countDocuments(query)
-
-  // Get products with pagination
-  const products = await Product.find(query)
-    .populate("category", "name slug")
-    .populate("brand", "name slug")
-    .sort(sortOptions)
-    .skip(skip)
-    .limit(limit)
-    .lean()
-
-  // Prepare pagination data
-  const pagination = {
-    total,
-    page,
-    limit,
-    pages: Math.ceil(total / limit),
-  }
-
-  return {
-    products: serializeMongoData(products),
-    pagination,
+    return await response.json()
+  } catch (error) {
+    console.error("Error fetching products:", error)
+    return { products: [], pagination: { total: 0, page: 1, limit: 12, pages: 0 } }
   }
 }
 
@@ -185,4 +81,3 @@ export default async function ProductsPage({ searchParams }) {
     </div>
   )
 }
-

@@ -4,7 +4,7 @@ const orderItemSchema = new mongoose.Schema({
   product: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Product",
-    required: true,
+    required: false, // Allow null for deleted products
   },
   quantity: {
     type: Number,
@@ -13,7 +13,14 @@ const orderItemSchema = new mongoose.Schema({
   },
   price: {
     type: Number,
-    required: true,
+    // required: true,
+  },
+  name: {
+    type: String,
+    // required: true,
+  },
+  image: {
+    type: String,
   },
 })
 
@@ -24,17 +31,37 @@ const orderSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
+    orderNumber: {
+      type: String,
+      required: true,
+      unique: true,
+    },
     items: [orderItemSchema],
+    subtotal: {
+      type: Number,
+      required: true,
+      default: 0,
+    },
+    shipping: {
+      type: Number,
+      required: true,
+      default: 0,
+    },
     total: {
       type: Number,
       required: true,
     },
     shippingAddress: {
+      firstName: String,
+      lastName: String,
       street: String,
+      apartment: String,
       city: String,
       state: String,
       zipCode: String,
       country: String,
+      phoneNumber: String,
+      emailAddress: String,
     },
     paymentMethod: {
       type: String,
@@ -61,10 +88,7 @@ const orderSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-  },
+  }
 )
 
-const Order = mongoose.models.Order || mongoose.model("Order", orderSchema)
-
-export default Order
-
+export default mongoose.models.Order || mongoose.model("Order", orderSchema)

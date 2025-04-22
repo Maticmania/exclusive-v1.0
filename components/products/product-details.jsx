@@ -1,77 +1,105 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import Image from "next/image"
-import Link from "next/link"
-import { Star, Truck, RotateCcw, Minus, Plus } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { formatCurrency } from "@/lib/utils"
-import AddToWishlistButton from "@/components/products/add-to-wishlist-button"
-import BuyNowButton from "./buy-now-button"
+import { useState } from "react";
+import Image from "next/image";
+import Link from "next/link";
+import {
+  Star,
+  Truck,
+  RotateCcw,
+  Minus,
+  Plus,
+  ChevronLeft,
+  ChevronRight,
+  X,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogClose } from "@/components/ui/dialog";
+import { useSwipeable } from "react-swipeable";
+import { formatCurrency, cn } from "@/lib/utils";
+import AddToWishlistButton from "@/components/products/add-to-wishlist-button";
+import BuyNowButton from "./buy-now-button";
+import { ProductImage } from "./product-image";
 
 export default function ProductDetails({ product }) {
-  const [selectedImage, setSelectedImage] = useState(0)
-  const [quantity, setQuantity] = useState(1)
-  const [selectedColor, setSelectedColor] = useState(0)
-  const [selectedSize, setSelectedSize] = useState(null)
+  const [selectedImage, setSelectedImage] = useState(0);
+  const [quantity, setQuantity] = useState(1);
+  const [selectedColor, setSelectedColor] = useState(0);
+  const [selectedSize, setSelectedSize] = useState(null);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
-  // Get color variants if they exist
+  // Get color variants
   const colorVariant = product.variants?.find(
-    (v) => v.name.toLowerCase() === "color" || v.name.toLowerCase() === "colours",
-  )
+    (v) =>
+      v.name.toLowerCase() === "color" || v.name.toLowerCase() === "colours"
+  );
 
-  // Get size variants if they exist
-  const sizeVariant = product.variants?.find((v) => v.name.toLowerCase() === "size" || v.name.toLowerCase() === "sizes")
+  // Get size variants
+  const sizeVariant = product.variants?.find(
+    (v) => v.name.toLowerCase() === "size" || v.name.toLowerCase() === "sizes"
+  );
 
-  // Default colors if no color variants
-  const defaultColors = []
-
-  // Default sizes if no size variants
-  const defaultSizes = []
-
-  // Use variant colors or default colors
-  const colors = colorVariant?.options || defaultColors
-
-  // Use variant sizes or default sizes
-  const sizes = sizeVariant?.options?.map((o) => o.name) || defaultSizes
+  // Default colors/sizes
+  const colors = colorVariant?.options || [];
+  const sizes = sizeVariant?.options?.map((o) => o.name) || [];
 
   // Handle quantity changes
   const increaseQuantity = () => {
     if (quantity < product.stock) {
-      setQuantity(quantity + 1)
+      setQuantity(quantity + 1);
     }
-  }
+  };
 
   const decreaseQuantity = () => {
     if (quantity > 1) {
-      setQuantity(quantity - 1)
+      setQuantity(quantity - 1);
     }
-  }
+  };
 
-  // Get breadcrumb path
+  // Image navigation
+  const handlePrevImage = () => {
+    setSelectedImage((prev) =>
+      prev === 0 ? product.images.length - 1 : prev - 1
+    );
+  };
+
+  const handleNextImage = () => {
+    setSelectedImage((prev) =>
+      prev === product.images.length - 1 ? 0 : prev + 1
+    );
+  };
+
+  // Swipe handlers
+  const swipeHandlers = useSwipeable({
+    onSwipedLeft: handleNextImage,
+    onSwipedRight: handlePrevImage,
+    trackMouse: true, // Allow mouse drag for desktop
+  });
+
+  // Breadcrumb path
   const breadcrumbPath = [
     { name: "Home", href: "/" },
     { name: "Products", href: "/products" },
-  ]
+  ];
 
   if (product.category) {
     breadcrumbPath.push({
       name: product.category.name,
       href: `/products?category=${product.category.slug || ""}`,
-    })
+    });
   }
 
-  breadcrumbPath.push({ name: product.name, href: "#" })
+  breadcrumbPath.push({ name: product.name, href: "#" });
 
   return (
-    <div className="w-full px-[5%] grid gap-10 min-h-[500px] py-10 font-inter">
+    <div className="w-full grid gap-6 py-8 font-inter">
       {/* Breadcrumb */}
-      <p className="font-poppins text-base md:text-lg text-gray-500">
+      <nav className="text-sm text-gray-500 font-poppins">
         {breadcrumbPath.map((item, index) => (
           <span key={index}>
             {index > 0 && " / "}
             {index === breadcrumbPath.length - 1 ? (
-              item.name
+              <span className="text-gray-700">{item.name}</span>
             ) : (
               <Link href={item.href} className="hover:text-primary">
                 {item.name}
@@ -79,86 +107,122 @@ export default function ProductDetails({ product }) {
             )}
           </span>
         ))}
-      </p>
+      </nav>
 
-      <div className="grid lg:grid-cols-2 gap-8">
+      <div className="grid lg:grid-cols-2 gap-6">
         {/* Product Images */}
-        <div className="space-y-4 md:flex lg:flex-col md:space-y-0 xl:space-y-0 xl:flex xl:flex-row-reverse flex-row-reverse gap-4">
-          <div className="aspect-square md:w-[85%] lg:w-full bg-gray-100 rounded-lg overflow-hidden">
-            <Image
+        <div className="flex flex-col md:flex-row-reverse gap-4">
+          {/* Main image */}
+          <div
+            className="aspect-square bg-white rounded-lg shadow-md overflow-hidden cursor-pointer relative"
+            onClick={() => setIsPreviewOpen(true)}
+          >
+             <Image
               src={product.images[selectedImage] || "/placeholder.svg?height=600&width=600"}
               alt={product.name}
               width={600}
               height={600}
-              className="w-full h-full object-contain"
+              className="w-full h-full object-contain transition-transform duration-200 hover:scale-105"
               priority
             />
           </div>
-          <div className="flex flex-row md:flex-col gap-4 overflow-y-auto md:max-h-[400px] scrollbar-none">
-  {product.images.slice(0, 5).map((image, i) => (
-    <div
-      key={i}
-      className={`w-[100px] lg:w-auto h-[100px] bg-gray-100 rounded-lg overflow-hidden cursor-pointer ${
-        selectedImage === i ? "border-2 border-primary" : ""
-      }`}
-      onClick={() => setSelectedImage(i)}
-    >
-      <Image
-        src={image || "/placeholder.svg?height=150&width=150"}
-        alt={`${product.name} - Image ${i + 1}`}
-        width={100}
-        height={100}
-        className="w-[100px] h-[100px] object-contain"
-      />
-    </div>
-  ))}
-</div>
 
+          {/* Thumbnails */}
+          <div className="flex md:flex-col gap-2 pb-2 scrollbar-thin scrollbar-thumb-gray-300 ">
+            {product.images.slice(0, 5).map((image, i) => {
+              const isLastVisible = i === 4 && product.images.length > 5;
+              return (
+                <button
+                  key={i}
+                  className={cn(
+                    "relative flex-shrink-0 w-16 md:w-20 h-20 bg-white rounded-md shadow-sm overflow-hidden",
+                    selectedImage === i ? "border border-primary" : ""
+                  )}
+                  onClick={() => setSelectedImage(i)}
+                >
+                  <ProductImage
+                    src={image}
+                    alt={`${product.name} - Image ${i + 1}`}
+                    width={80}
+                    height={80}
+                  />
+                  {isLastVisible && (
+                    <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center text-white font-semibold text-sm">
+                      +{product.images.length - 5}
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* Product Details */}
         <div className="space-y-6">
-          <h1 className="text-3xl font-bold font-inter">{product.name}</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold font-inter">
+            {product.name}
+          </h1>
 
           <div className="flex items-center space-x-2 font-poppins">
             <div className="flex">
               {[...Array(5)].map((_, i) => (
                 <Star
                   key={i}
-                  className={`w-5 h-5 ${i < Math.round(product.rating || 4) ? "text-yellow-400 fill-current" : "text-gray-300"}`}
+                  className={cn(
+                    "w-5 h-5",
+                    i < Math.round(product.rating || 4)
+                      ? "text-yellow-400 fill-current"
+                      : "text-gray-300"
+                  )}
                 />
               ))}
             </div>
-            <span className="text-gray-500">({product.reviewCount || 150} Reviews) </span>
+            <span className="text-gray-500">
+              ({product.reviewCount || 150} Reviews)
+            </span>
             <span>|</span>
-            <span className="text-green-500">{product.stock > 0 ? `In stock (${product.stock})` : "Out of stock"}</span>
+            <span
+              className={product.stock > 0 ? "text-green-500" : "text-red-500"}
+            >
+              {product.stock > 0
+                ? `In stock (${product.stock})`
+                : "Out of stock"}
+            </span>
           </div>
 
-          <p className="text-2xl font-bold font-poppins">
+          <p className="text-xl sm:text-2xl font-bold font-poppins">
             {formatCurrency(product.price)}
             {product.compareAtPrice && (
-              <span className="text-lg line-through text-gray-500 ml-2">{formatCurrency(product.compareAtPrice)}</span>
+              <span className="text-base sm:text-lg line-through text-gray-500 ml-2">
+                {formatCurrency(product.compareAtPrice)}
+              </span>
             )}
           </p>
 
-          <p className="text-gray-600 font-poppins text-sm">{product.description}</p>
+          <p className="text-gray-600 font-poppins text-sm sm:text-base">
+            {product.description}
+          </p>
 
-          {/* Only show variants when they exist */}
+          {/* Variants */}
           {(colors.length > 0 || sizes.length > 0) && (
             <div className="space-y-4 border-t pt-4">
-              {/* Color options */}
               {colors.length > 0 && (
-                <div className="flex items-center gap-2">
-                  <p className="font-semibold font-poppins">Colours:</p>
+                <div className="flex items-center gap-3">
+                  <p className="font-semibold font-poppins text-sm">Colours:</p>
                   <div className="flex space-x-2">
                     {colors.map((color, i) => (
                       <button
                         key={i}
-                        className={`w-5 h-5 rounded-full border ${
-                          selectedColor === i ? "ring-2 ring-offset-2 ring-primary" : ""
-                        }`}
+                        className={cn(
+                          "w-6 h-6 rounded-full border",
+                          selectedColor === i
+                            ? "ring-2 ring-offset-2 ring-primary"
+                            : ""
+                        )}
                         style={{
-                          backgroundColor: color.value.startsWith("#") ? color.value : color.value,
+                          backgroundColor: color.value.startsWith("#")
+                            ? color.value
+                            : color.value,
                         }}
                         onClick={() => setSelectedColor(i)}
                         aria-label={`Select ${color.name} color`}
@@ -168,17 +232,19 @@ export default function ProductDetails({ product }) {
                 </div>
               )}
 
-              {/* Size options */}
               {sizes.length > 0 && (
-                <div className="flex items-center gap-2 font-poppins">
-                  <p className="font-semibold">Size:</p>
-                  <div className="flex space-x-2">
+                <div className="flex items-center gap-3 font-poppins">
+                  <p className="font-semibold text-sm">Size:</p>
+                  <div className="flex flex-wrap gap-2">
                     {sizes.map((size, i) => (
                       <button
                         key={size}
-                        className={`px-3 py-1 border rounded-md hover:bg-primary hover:text-white ${
-                          selectedSize === i ? "bg-primary text-white" : ""
-                        }`}
+                        className={cn(
+                          "px-3 py-1 border rounded-md text-sm",
+                          selectedSize === i
+                            ? "bg-primary text-white"
+                            : "hover:bg-primary/10"
+                        )}
                         onClick={() => setSelectedSize(i)}
                       >
                         {size}
@@ -190,38 +256,57 @@ export default function ProductDetails({ product }) {
             </div>
           )}
 
-          <div className="flex items-center space-x-4 ">
+          {/* Quantity and Actions */}
+          <div className="flex items-center gap-4">
             <div className="flex items-center border rounded-md">
-              <button className="px-3 py-1 text-xl" onClick={decreaseQuantity} disabled={quantity <= 1}>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={decreaseQuantity}
+                disabled={quantity <= 1}
+                aria-label="Decrease quantity"
+              >
                 <Minus className="h-4 w-4" />
-              </button>
-              <span className="px-3 py-1 text-xl border-x">{quantity}</span>
-              <button className="px-3 py-1 text-xl" onClick={increaseQuantity} disabled={quantity >= product.stock}>
+              </Button>
+              <span className="px-4 py-2 text-base font-medium">
+                {quantity}
+              </span>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={increaseQuantity}
+                disabled={quantity >= product.stock}
+                aria-label="Increase quantity"
+              >
                 <Plus className="h-4 w-4" />
-              </button>
+              </Button>
             </div>
-            <div className="w-full">
-            <BuyNowButton className={"w-full"} product={product} quantity={quantity} />
-            </div>
-
+            <BuyNowButton
+              className="w-full sm:w-auto flex-1"
+              product={product}
+              quantity={quantity}
+            />
             <AddToWishlistButton product={product} className="sm:w-auto" />
           </div>
 
-          <div className="mt-4 rounded border">
-            <div className="flex items-center gap-3 text-sm border p-4">
-              <Truck className="w-5 h-5" />
+          {/* Delivery Info */}
+          <div className="mt-4 rounded border bg-white shadow-sm">
+            <div className="flex items-center gap-3 text-sm p-4 border-b">
+              <Truck className="w-5 h-5 text-primary" />
               <div>
                 <p className="font-medium">Free Delivery</p>
-                <p className="text-gray-500">Enter your postal code for Delivery Availability</p>
+                <p className="text-gray-500">
+                  Enter your postal code for Delivery Availability
+                </p>
               </div>
             </div>
-            <div className="flex items-center gap-3 text-sm border p-4">
-              <RotateCcw className="w-5 h-5" />
+            <div className="flex items-center gap-3 text-sm p-4">
+              <RotateCcw className="w-5 h-5 text-primary" />
               <div>
                 <p className="font-medium">Return Delivery</p>
                 <p className="text-gray-500">
                   Free 30 Days Delivery Returns.{" "}
-                  <Link href="/" className="underline hover:font-medium">
+                  <Link href="/" className="underline hover:text-primary">
                     Details
                   </Link>
                 </p>
@@ -230,7 +315,72 @@ export default function ProductDetails({ product }) {
           </div>
         </div>
       </div>
-    </div>
-  )
-}
 
+      {/* Image Preview Modal */}
+      <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
+        <DialogContent
+          className="max-w-[90vw] sm:max-w-3xl p-0 bg-transparent border-none"
+          {...swipeHandlers}
+        >
+          {/* <DialogClose className="absolute top-4 right-4 z-10">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="bg-black/50 text-white hover:bg-black/70 rounded-full"
+              aria-label="Close preview"
+            >
+              <X className="h-6 w-6" />
+            </Button>
+          </DialogClose> */}
+          <div className="relative w-full h-[60vh] sm:h-[80vh] bg-white rounded-lg overflow-hidden">
+            <Image
+              src={
+                product.images[selectedImage] ||
+                "/placeholder.svg?height=800&width=800"
+              }
+              alt={`${product.name} - Image ${selectedImage + 1}`}
+              fill
+              className="object-contain"
+              priority
+            />
+            {product.images.length > 1 && (
+              <>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/50 text-white hover:bg-black/70 rounded-full"
+                  onClick={handlePrevImage}
+                  aria-label="Previous image"
+                >
+                  <ChevronLeft className="h-6 w-6" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/50 text-white hover:bg-black/70 rounded-full"
+                  onClick={handleNextImage}
+                  aria-label="Next image"
+                >
+                  <ChevronRight className="h-6 w-6" />
+                </Button>
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
+                  {product.images.map((_, i) => (
+                    <button
+                      key={i}
+                      className={cn(
+                        "w-2 h-2 rounded-full",
+                        selectedImage === i ? "bg-white" : "bg-white/50"
+                      )}
+                      onClick={() => setSelectedImage(i)}
+                      aria-label={`Go to image ${i + 1}`}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
