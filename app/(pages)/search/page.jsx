@@ -7,52 +7,27 @@ export const metadata = {
   title: "Search Results | Exclusive",
   description: "Search results for products in our exclusive collection",
 }
-
-// Function to build API URL with search params
-function buildApiUrl(searchParams) {
-  const baseUrl = `${process.env.NEXT_PUBLIC_BASE_URL || ""}/api/products`
-  const url = new URL(baseUrl, "http://localhost:3000")
-
-  // Add all search params to the URL
-  Object.entries(searchParams).forEach(([key, value]) => {
-    if (value) {
-      url.searchParams.append(key, value)
-    }
-  })
-
-  return url.toString()
-}
-
-// Fetch products from API
-async function getProducts(searchParams) {
-  try {
-    const apiUrl = buildApiUrl(searchParams)
-    const response = await fetch(apiUrl, { next: { revalidate: 60 } }) // Cache for 60 seconds
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch products: ${response.status}`)
-    }
-
-    return await response.json()
-  } catch (error) {
-    console.error("Error fetching products:", error)
-    return { products: [], pagination: { total: 0, page: 1, limit: 12, pages: 0 } }
-  }
-}
+export const dynamic = 'force-dynamic';
 
 export default async function SearchPage({ searchParams }) {
-  const { products, pagination } = await getProducts(searchParams)
-  const searchQuery = searchParams.search || ""
+  const entries = Object.entries(searchParams ?? {});
+  const query = new URLSearchParams(entries).toString();
 
-  // Construct breadcrumb items
+  const apiUrl = `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/api/products?${query}`;
+
+  const response = await fetch(apiUrl, { next: { revalidate: 60 } });
+  const { products, pagination } = await response.json();
+
+  const { search } = await searchParams
+  const searchQuery = search || "";
+
   const breadcrumbItems = [
     { label: "Search" },
     ...(searchQuery ? [{ label: `"${searchQuery}"` }] : []),
-  ]
+  ];
 
   return (
     <div className="container max-w-screen-xl mx-auto px-4 py-10">
-      {/* Breadcrumbs */}
       <div className="mb-6">
         <Breadcrumb items={breadcrumbItems} />
       </div>
@@ -73,6 +48,6 @@ export default async function SearchPage({ searchParams }) {
         </div>
       </div>
     </div>
-  )
+  );
 }
 

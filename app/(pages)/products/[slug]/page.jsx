@@ -6,10 +6,9 @@ import RelatedProducts from "@/components/products/related-products";
 // Helper function to get the full URL including the protocol
 function getBaseUrl() {
   if (process.env.VERCEL_URL) {
-    // If deployed on Vercel, use the VERCEL_URL environment variable
     return `https://${process.env.VERCEL_URL}`;
   }
-  return process.env.NEXT_PUBLIC_BASE_URL;
+  return process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"; // ✅ fallback
 }
 
 async function getProduct(slug) {

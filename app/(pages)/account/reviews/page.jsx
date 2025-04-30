@@ -1,7 +1,7 @@
 import { getServerSession } from "next-auth/next"
 import { redirect } from "next/navigation"
-import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import AccountSidebar from "@/components/profile/account-sidebar"
+import { authOptions } from "@/lib/auth"
 
 export default async function ReviewsPage() {
   const session = await getServerSession(authOptions)
