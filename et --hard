@@ -1,0 +1,22 @@
+[33m8453a63[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m fixing little bug
+[33med9212e[m fixing little bug
+[33mff93700[m fixing little bug
+[33m0cf8077[m commit
+[33m34b84ff[m first commit
+[33md4b3c3c[m product done
+[33me73ba47[m seed: product seeding done 190 products
+[33m975245e[m info: before seeding
+[33mb194ad2[m product page and details done
+[33m3a0f266[m trying somthin new
+[33m1ed84ed[m data need to be seed now
+[33mafc8f34[m minoor error solved
+[33m46044dc[m major error resolved
+[33md06c34d[m product done
+[33m2c42848[m product done
+[33me938d75[m run build
+[33m2aeb447[m image is added to cloudinary
+[33m1c62824[m management
+[33m80ba4a1[m product api and admin management done
+[33m38d6bd2[m done with auth and profile
+[33mf7ca84b[m feat: app set up, connect to database, set social auth, login and sign up, profile added, admin route, and apis'
+[33md753c08[m Initial commit from Create Next App
