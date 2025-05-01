@@ -143,7 +143,7 @@ export default function ProductCard({ product }) {
         {/* Add to cart button - visible on hover */}
         <div
           className={`transition-all duration-300 ${
-            isHovering ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
+            isHovering ? "lg:opacity-100 lg:translate-y-0" : "lg:opacity-0 lg:translate-y-2"
           }`}
         >
           <AddToCartButton product={product}  className={"w-full py-2 bg-black text-white text-sm font-medium rounded hover:bg-gray-800 transition-colors disabled:bg-gray-400"} />

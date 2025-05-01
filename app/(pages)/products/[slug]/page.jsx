@@ -60,7 +60,7 @@ async function getRelatedProducts(categorySlug, currentProductSlug) {
 }
 
 export async function generateMetadata({ params }) {
-  const { slug } = params; // Correct destructuring
+  const { slug } = await params; // Correct destructuring
   const product = await getProduct(slug);
 
   if (!product) {

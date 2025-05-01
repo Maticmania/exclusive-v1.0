@@ -27,40 +27,15 @@ export default function RelatedProducts({ products = [] }) {
 
   return (
     <div className="relative py-6">
-      {/* <div className="flex items-center justify-end mb-4">
-            {products.length > 3 && (
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={scrollLeft}
-              className="rounded-full shadow-sm hover:bg-gray-100"
-              aria-label="Scroll left"
-            >
-              <ChevronLeft className="h-5 w-5" />
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={scrollRight}
-              className="rounded-full shadow-sm hover:bg-gray-100"
-              aria-label="Scroll right"
-            >
-              <ChevronRight className="h-5 w-5" />
-            </Button>
-          </div>
-        )}
-      </div> */}
       <div
         ref={scrollContainerRef}
-        className="flex overflow-x-auto snap-x snap-mandatory scrollbar-none pb-4"
+        className="md:hidden flex overflow-x-auto snap-x snap-mandatory scrollbar-hide gap-4 pb-4"
         style={{ scrollSnapType: "x mandatory" }}
       >
         {products.map((product) => (
           <div
             key={product._id}
-            className="flex-shrink-0 w-[280px] sm:w-[250px] md:w-[220px] snap-start mx-2"
-          >
+            className="flex-shrink-0 w-[45%] sm:w-[30%] snap-start">
             <ProductCard product={product} />
           </div>
         ))}
