@@ -17,7 +17,7 @@ export default function Navigation() {
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const pathname = usePathname()
   const router = useRouter()
-  const { user, isAuthenticated, isAdmin, isSuperAdmin, isLoading } = useAuthStore()
+  const { user, isAuthenticated } = useAuthStore()
   const { items } = useCartStore()
   const dropdownRef = useRef(null)
   const searchInputRef = useRef(null)
@@ -55,7 +55,10 @@ export default function Navigation() {
       setIsMobileMenuOpen(false)
     }
   }
+  const authStore = useAuthStore()
 
+  const isAdmin = authStore.isAdmin()
+  const isSuperAdmin = authStore.isSuperAdmin()  
   return (
     <div className="h-[80px] border-b border-gray-200 w-full px-[5%] flex justify-between items-center bg-white relative">
       {/* Mobile menu button */}
@@ -93,14 +96,14 @@ export default function Navigation() {
         >
           Contact
         </Link>
-        {(isAdmin || isSuperAdmin) && (
+        {/* {(isAdmin || isSuperAdmin) && (
           <Link
             href="/admin/dashboard"
             className={`text-base ${pathname.startsWith("/admin") ? "text-primary font-semibold" : "text-gray-800"}`}
           >
             Admin
           </Link>
-        )}
+        )} */}
         {!isAuthenticated && (
           <Link
             href="/auth/signup"
