@@ -37,8 +37,7 @@ const userSchema = new mongoose.Schema(
       },
     ],
     role: { type: String, enum: ["user", "admin", "superadmin"], default: "user" },
-
-    // New fields
+    isVerified: { type: Boolean, default: false },
     cart: [cartItemSchema], // Stores cart items
     wishlist: [{ type: mongoose.Schema.Types.ObjectId, ref: "Product" }], // Stores wishlist items
   },
