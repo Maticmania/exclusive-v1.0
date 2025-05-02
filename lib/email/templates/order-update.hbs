@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Order Update</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #f8f8f8;
+      margin: 0;
+      padding: 0;
+      color: #333;
+    }
+    .email-wrapper {
+      max-width: 600px;
+      margin: 30px auto;
+      background-color: #ffffff;
+      padding: 20px;
+      border-radius: 8px;
+      border-top: 6px solid #c41e3a;
+    }
+    .header {
+      text-align: center;
+      padding-bottom: 20px;
+    }
+    .header h1 {
+      color: #c41e3a;
+      margin: 0;
+    }
+    .status-message {
+      text-align: center;
+      font-size: 18px;
+      margin: 20px 0;
+      color: #c41e3a;
+    }
+    .section {
+      margin-bottom: 20px;
+    }
+    .section h2 {
+      font-size: 16px;
+      margin-bottom: 8px;
+      color: #c41e3a;
+    }
+    .items-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .items-table th,
+    .items-table td {
+      padding: 8px;
+      border-bottom: 1px solid #ddd;
+      text-align: left;
+      font-size: 14px;
+    }
+    .item-image {
+      max-height: 40px;
+      margin-right: 8px;
+      vertical-align: middle;
+    }
+    .footer {
+      text-align: center;
+      margin-top: 30px;
+      font-size: 12px;
+      color: #999;
+    }
+  </style>
+</head>
+<body>
+  <div class="email-wrapper">
+    <div class="header">
+      <h1>Order Update</h1>
+      <p>Order #: <strong>{{orderNumber}}</strong></p>
+      <p>Date: <strong>{{date}}</strong></p>
+    </div>
+
+    <div class="status-message">
+      {{#if (eq orderStatus "shipped")}}
+        Your order has been <strong>shipped</strong>! 🎉
+      {{else if (eq orderStatus "delivered")}}
+        Your order has been <strong>delivered</strong>. We hope you enjoy it! 💖
+      {{else if (eq orderStatus "cancelled")}}
+        Your order was <strong>cancelled</strong>. If you have any questions, feel free to contact us.
+      {{else}}
+        Your order status has been updated to <strong>{{orderStatus}}</strong>.
+      {{/if}}
+    </div>
+
+    <div class="section">
+      <h2>Items</h2>
+      <table class="items-table">
+        <thead>
+          <tr>
+            <th>Product</th>
+            <th>Qty</th>
+            <th>Price</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{#each items}}
+            <tr>
+              <td>
+                <img src="{{this.image}}" alt="{{this.name}}" class="item-image" />
+                {{this.name}}
+              </td>
+              <td>{{this.quantity}}</td>
+              <td>${{this.price}}</td>
+            </tr>
+          {{/each}}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="section">
+      <h2>Summary</h2>
+      <p><strong>Subtotal:</strong> ${{subtotal}}</p>
+      <p><strong>Total:</strong> ${{total}}</p>
+      <p><strong>Payment:</strong> {{paymentMethod}} ({{paymentStatus}})</p>
+    </div>
+
+    <div class="section">
+      <h2>Shipping Address</h2>
+      <p>
+        {{shippingAddress.firstName}} {{shippingAddress.lastName}}<br />
+        {{shippingAddress.street}} {{shippingAddress.apartment}}<br />
+        {{shippingAddress.city}}, {{shippingAddress.state}} {{shippingAddress.zipCode}}<br />
+        {{shippingAddress.country}}<br />
+        Phone: {{shippingAddress.phoneNumber}}<br />
+        Email: {{shippingAddress.emailAddress}}
+      </p>
+    </div>
+
+    <div class="footer">
+      &copy; {{year}} Exclusive Store. All rights reserved.
+    </div>
+  </div>
+</body>
+</html>
