@@ -13,6 +13,40 @@ import Featured from "@/components/home/Featured";
 import FeaturedProduct from "@/components/home/Featured-Products";
 import Offers from "@/components/about/Offers";
 
+export const metadata = {
+  title: "Shop All Products | Exclusive",
+  keywords: [
+    "e-commerce",
+    "online shopping",
+    "exclusive deals",
+    "best prices",
+    "quality products",
+    "electronics",
+    "fashion",
+    "home goods",
+  ],
+  description: "Browse a wide selection of quality products at the best prices.",
+  openGraph: {
+    title: "Shop All Products | Exclusive",
+    description: "Wide selection of electronics, fashion, and more.",
+    url: "https://exclusive-v1-0.onrender.com/",
+    siteName: "Exclusive",
+    locale: "en_US",
+    type: "website",
+    images: [
+      {
+        url: "https://i.ibb.co/mCX1G1B4/Macbook-Air-exclusive-v1-0-onrender-com.png", // Host an OG image
+        width: 1200,
+        height: 630,
+      },
+    ],
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+}
+
 export default async function HomePage() {
   const flashSaleProducts = await getRandomProducts(12, true);
   const bestSellingProducts = await getBestSellers(10);

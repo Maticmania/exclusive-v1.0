@@ -73,6 +73,18 @@ export async function generateMetadata({ params }) {
   return {
     title: `${product.name} | Exclusive`,
     description: product.description || "View this exclusive product",
+    openGraph: {
+      title: product.name,
+      description: product.description || "View this exclusive product",
+      url: `${getBaseUrl()}/products/${slug}`,
+      images: [
+        {
+          url: product.thumbnail || "https://i.ibb.co/mCX1G1B4/Macbook-Air-exclusive-v1-0-onrender-com.png",
+          width: 1200,
+          height: 630,
+        },
+      ],
+    },
   };
 }
 
