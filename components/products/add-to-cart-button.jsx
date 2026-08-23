@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useCartStore } from "@/store/auth-store";
+import { useCartStore, useAuthStore } from "@/store/auth-store";
 import { Button } from "@/components/ui/button";
 import { ShoppingCart, Check } from "lucide-react";
 import { toast } from "sonner";
@@ -19,6 +19,7 @@ export default function AddToCartButton({
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [isInCart, setIsInCart] = useState(false);
   const { addItem, items } = useCartStore();
+  const { isAuthenticated } = useAuthStore();
 
   // Check if product is already in cart
   useEffect(() => {
@@ -29,15 +30,15 @@ export default function AddToCartButton({
     }
 
     const productInCart = items.find((item) => {
-      if (!item.product || !item.product._id) return false; // Safeguard for cart items
+      if (!item.product || !item.product._id) return false;
       return (
         item.product._id === product._id &&
-        ((!variant && !item.variant) || 
-         (variant && item.variant && item.variant === (variant._id || variant)))
+        ((!variant && !item.variant) ||
+          (variant && item.variant && item.variant === (variant._id || variant)))
       );
     });
     setIsInCart(!!productInCart);
-  }, [items, product, variant]); // Removed product._id, variant from deps since we check product directly
+  }, [items, product, variant]);
 
   const handleAddToCart = async () => {
     if (isInCart && !buyNow) return;
@@ -49,41 +50,42 @@ export default function AddToCartButton({
     setIsAddingToCart(true);
 
     try {
-      // Get the variant ID if a variant is selected
       const variantId = variant && variant._id ? variant._id : null;
 
-      // Add to local store first for immediate feedback
+      // Always add to local store immediately — works for guests too
       addItem(product, quantity, variantId);
 
-      // Then sync with server
-      const response = await fetch("/api/cart", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          productId: product._id,
-          quantity,
-          variantId,
-        }),
-      });
+      if (isAuthenticated) {
+        // Only call the server when the user is logged in
+        const response = await fetch("/api/cart", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ productId: product._id, quantity, variantId }),
+        });
 
-      if (!response.ok) {
-        throw new Error("Failed to add to cart");
+        if (!response.ok) {
+          // Item is already in local store; server sync failed but it's non-fatal
+          console.warn("Server cart sync failed — item kept in local cart");
+        }
       }
 
       setIsInCart(true);
-      
+
       if (!buyNow) {
         toast.success("Added to cart", {
-          description: `${product.name} has been added to your cart.`,
+          description: isAuthenticated
+            ? `${product.name} has been added to your cart.`
+            : `${product.name} added. Sign in to save your cart.`,
         });
       } else {
         router.push("/checkout");
       }
     } catch (error) {
       console.error("Error adding to cart:", error);
-      toast.error("Failed to add item to cart");
+      // Item is already in local store — don't show a hard error
+      toast.success("Added to cart", {
+        description: `${product.name} has been added to your cart.`,
+      });
     } finally {
       setIsAddingToCart(false);
     }

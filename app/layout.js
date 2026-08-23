@@ -1,4 +1,3 @@
-import { Inter, Poppins } from "next/font/google"
 import { headers } from "next/headers"
 import "./globals.css"
 import AuthSessionProvider from "@/components/providers/session-provider"
@@ -7,18 +6,6 @@ import Footer from "@/components/layout/footer"
 import StoreDebug from "@/components/debug/store-debug"
 import { Toaster } from "sonner"
 
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-inter",
-  display: "swap",
-})
-
-const poppins = Poppins({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-poppins",
-  display: "swap",
-})
 
 export const metadata = {
   title: "Exclusive | E-commerce",
@@ -31,8 +18,8 @@ export default async function RootLayout({ children }) {
   const isAuthPage = headersList.get("x-is-auth-page") === "true"
 
   return (
-    <html lang="en" className={`${inter.variable} ${poppins.variable}`}>
-      <body className={inter.className}>
+    <html lang="en">
+      <body>
         <AuthSessionProvider>
           {!isAdminPage && !isAuthPage && <Navigation />}
           <main>{children}</main>

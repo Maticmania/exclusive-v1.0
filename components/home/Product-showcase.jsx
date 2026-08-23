@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import jbl from "@/public/images/jbl.svg";
 
 export default function ProductShowcase() {
-  const TARGET_DATE = new Date("2025-5-1").getTime();
+  const TARGET_DATE = new Date("2025-6-1").getTime();
   const [timeLeft, setTimeLeft] = useState({
     days: 0,
     hours: 0,

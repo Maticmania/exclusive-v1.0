@@ -194,33 +194,6 @@ export default function AccountSidebar() {
               </Collapsible>
             ))}
           </nav>
-          {/* <div className="mt-6 pt-4 border-t">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="w-full justify-start gap-2">
-                  <User className="h-5 w-5" />
-                  <span className="truncate">My Account</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-[200px]">
-                <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <Link href="/account/profile" className="flex items-center gap-2">
-                    <Settings className="h-4 w-4" />
-                    Profile
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => (window.location.href = "/auth/signout")}
-                  className="flex items-center gap-2"
-                >
-                  <LogOut className="h-4 w-4" />
-                  Sign Out
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div> */}
         </div>
       </div>
     </TooltipProvider>

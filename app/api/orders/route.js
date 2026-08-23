@@ -6,27 +6,8 @@ import Order from "@/models/order";
 import Cart from "@/models/cart";
 import Product from "@/models/product";
 import mongoose from "mongoose";
+import { sendEmail } from "@/lib/email/sendEmail";
 
-export async function GET(req) {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    await connectToDatabase();
-    const orders = await Order.find({ user: session.user.id }).sort({
-      createdAt: -1,
-    });
-    return NextResponse.json(orders);
-  } catch (error) {
-    console.error("Orders fetch error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
-  }
-}
 export async function POST(req) {
   try {
     const session = await getServerSession(authOptions);
@@ -80,24 +61,24 @@ export async function POST(req) {
         price: product.price,
         name: product.name,
         image: product.images?.[product.images.length - 1] || "/placeholder.svg",
-      })
+      });
     }
 
     const orderNumber = `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    const orderDate = new Date().toISOString();
+    const subtotal = orderItems.reduce(
+      (sum, item) => sum + item.price * item.quantity,
+      0
+    );
+    const total = subtotal; // Add shipping or other fees if necessary
 
     const order = new Order({
       orderNumber,
       user: session.user.id,
       items: orderItems,
-      subtotal: orderItems.reduce(
-        (sum, item) => sum + item.price * item.quantity,
-        0
-      ),
+      subtotal,
       shipping: 0,
-      total: orderItems.reduce(
-        (sum, item) => sum + item.price * item.quantity,
-        0
-      ),
+      total,
       shippingAddress: {
         firstName: shippingAddress.firstName || "",
         lastName: shippingAddress.lastName || "",
@@ -113,9 +94,38 @@ export async function POST(req) {
       paymentMethod,
       paymentStatus: "pending",
       orderStatus: "processing",
+      createdAt: orderDate,
     });
 
     console.log("Creating order with data:", JSON.stringify(order, null, 2));
+    const plainItems = order.items.map((item) => ({
+      name: item.name,
+      image: item.image,
+      quantity: item.quantity,
+      price: item.price,
+    }));
+    // Send confirmation email
+    await sendEmail({
+      to: order.shippingAddress.emailAddress,
+      subject: `Order Confirmation - ${order.orderNumber}`,
+      template: "order-confirmation",
+      context: {
+        firstName: order.shippingAddress.firstName,
+        orderNumber: order.orderNumber,
+        items: plainItems, // ✅ plain safe items
+        subtotal: order.subtotal,
+        total: order.total,
+        paymentMethod: order.paymentMethod,
+        paymentStatus: order.paymentStatus,
+        shippingAddress: order.shippingAddress,
+        orderDate: new Date(order.createdAt).toLocaleDateString("en-US", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        }), // 👈 Format date nicely
+        year: new Date().getFullYear(),
+      },
+    });
 
     await order.save();
     await Cart.findOneAndUpdate(
@@ -141,29 +151,6 @@ export async function POST(req) {
         message: "Failed to create order",
         error: error.message,
       },
-      { status: 500 }
-    );
-  }
-}
-
-export async function DELETE(req) {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    await connectToDatabase();
-    const orders = await Order.deleteMany({ user: session.user.id });
-
-    return NextResponse.json({
-      success: true,
-      message: "Order deleted succesfully",
-    });
-  } catch (error) {
-    console.error("Unable to delete orders:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
       { status: 500 }
     );
   }

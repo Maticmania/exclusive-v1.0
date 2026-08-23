@@ -6,13 +6,14 @@ import Link from "next/link";
 import { Minus, Plus, Trash2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useCartStore } from "@/store/auth-store";
+import { useCartStore, useAuthStore } from "@/store/auth-store";
 import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function CartPage() {
   const { items, total, updateQuantity, removeItem, syncWithServer } = useCartStore();
+  const { isAuthenticated } = useAuthStore();
   const [couponCode, setCouponCode] = useState("");
   const [loadingItemIds, setLoadingItemIds] = useState({});
   const [isUpdatingCart, setIsUpdatingCart] = useState(false);
@@ -293,7 +294,7 @@ export default function CartPage() {
                   </CardContent>
                   <CardFooter>
                     <Button className="w-full bg-primary hover:bg-primary/90" asChild>
-                      <Link href="/checkout">Proceed to checkout</Link>
+                      <Link href={isAuthenticated ? "/checkout" : "/auth/signin"}>{isAuthenticated ? "Proceed to checkout" : "Sign in to checkout"}</Link>
                     </Button>
                   </CardFooter>
                 </Card>

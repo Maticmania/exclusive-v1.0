@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Order Confirmation</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #f9f9f9;
+      color: #333;
+      margin: 0;
+      padding: 0;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: auto;
+      background: #ffffff;
+      border-radius: 8px;
+      padding: 24px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+    }
+
+    .header {
+      text-align: center;
+      padding-bottom: 16px;
+      border-bottom: 2px solid #eaeaea;
+    }
+
+    .header h1 {
+      color: #d90429; /* Red Rose */
+      margin: 0;
+      font-size: 24px;
+    }
+
+    .summary {
+      margin: 24px 0;
+    }
+
+    .summary h2 {
+      font-size: 18px;
+      color: #d90429;
+      margin-bottom: 8px;
+    }
+
+    .items-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 16px;
+    }
+
+    .items-table th, .items-table td {
+      padding: 12px;
+      border: 1px solid #eee;
+      text-align: left;
+    }
+
+    .items-table th {
+      background-color: #f4f4f4;
+    }
+
+    .item-image {
+      width: 50px;
+      height: 50px;
+      object-fit: cover;
+      margin-right: 8px;
+      border-radius: 4px;
+    }
+
+    .totals {
+      margin-top: 20px;
+      font-size: 15px;
+    }
+
+    .footer {
+      margin-top: 32px;
+      text-align: center;
+      font-size: 13px;
+      color: #999;
+    }
+
+    @media only screen and (max-width: 600px) {
+      .item-image {
+        width: 40px;
+        height: 40px;
+      }
+
+      .items-table th, .items-table td {
+        padding: 8px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Thank you for your order, {{firstName}}!</h1>
+      <p>Order #: <strong>{{orderNumber}}</strong></p>
+        <p>Date: <strong>{{orderDate}}</strong></p> <!-- 👈 Add this line -->
+    </div>
+
+    <div class="summary">
+      <h2>Order Summary</h2>
+      <table class="items-table">
+        <thead>
+          <tr>
+            <th>Item</th>
+            <th>Qty</th>
+            <th>Price</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{#each items}}
+          <tr>
+            <td>
+              <img src="{{this.image}}" alt="{{this.name}}" class="item-image" />
+              {{this.name}}
+            </td>
+            <td>{{this.quantity}}</td>
+            <td>${{this.price}}</td>
+          </tr>
+          {{/each}}
+        </tbody>
+      </table>
+
+      <div class="totals">
+        <p><strong>Subtotal:</strong> ${{subtotal}}</p>
+        <p><strong>Total:</strong> ${{total}}</p>
+        <p><strong>Payment Method:</strong> {{paymentMethod}}</p>
+        <p><strong>Payment Status:</strong> {{paymentStatus}}</p>
+      </div>
+    </div>
+
+    <div class="summary">
+      <h2>Shipping Information</h2>
+      <p>{{shippingAddress.firstName}} {{shippingAddress.lastName}}</p>
+      <p>{{shippingAddress.street}} {{shippingAddress.apartment}}</p>
+      <p>{{shippingAddress.city}}, {{shippingAddress.state}} {{shippingAddress.zipCode}}</p>
+      <p>{{shippingAddress.country}}</p>
+      <p>Phone: {{shippingAddress.phoneNumber}}</p>
+      <p>Email: {{shippingAddress.emailAddress}}</p>
+    </div>
+
+    <div class="footer">
+      &copy; {{year}} Exclusive. All rights reserved.
+    </div>
+  </div>
+</body>
+</html>
