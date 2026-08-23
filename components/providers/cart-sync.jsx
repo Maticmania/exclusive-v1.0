@@ -1,19 +1,24 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useRef } from "react"
 import { useSession } from "next-auth/react"
-import { useCartStore } from "@/store/cart-store"
+import { useCartStore } from "@/store/auth-store"
 
 export default function CartSync() {
-  const { data: session, status } = useSession()
-  const { syncWithServer, isServerSynced } = useCartStore()
+  const { status } = useSession()
+  const { syncWithServer } = useCartStore()
+  // Track the previous status to detect the login transition
+  const prevStatusRef = useRef(status)
 
   useEffect(() => {
-    // Only sync when user is authenticated and cart is not already synced
-    if (status === "authenticated" && session && !isServerSynced) {
-      syncWithServer(session)
-    }
-  }, [status, session, syncWithServer, isServerSynced])
+    const prevStatus = prevStatusRef.current
+    prevStatusRef.current = status
 
-  return null // This is a utility component with no UI
+    // Trigger merge+sync when the user has just signed in
+    if (status === "authenticated" && prevStatus !== "authenticated") {
+      syncWithServer()
+    }
+  }, [status, syncWithServer])
+
+  return null // Utility component — no UI
 }

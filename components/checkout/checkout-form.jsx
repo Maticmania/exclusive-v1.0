@@ -83,7 +83,7 @@ export default function CheckoutForm() {
 
   // Calculate cart totals
   const calculateTotals = () => {
-    const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0)
+    const subtotal = items.reduce((sum, item) => sum + (item.price || item.product?.price || 0) * (item.quantity || 1), 0)
     const shipping = subtotal > 100 ? 0 : 10 // Free shipping for orders over $100
     const total = subtotal + shipping
     return { subtotal, shipping, total }
@@ -105,11 +105,11 @@ export default function CheckoutForm() {
   
       const orderData = {
         items: items.map((item) => ({
-          productId: item._id,
+          productId: item.product?._id || item.product,
           quantity: item.quantity,
-          price: item.price,
-          name: item.name,
-          image: item.image,
+          price: item.price || item.product?.price || 0,
+          name: item.product?.name || "Unknown Product",
+          image: item.product?.images?.[0] || "",
         })),
         shippingAddress: {
           firstName: data.firstName,

@@ -126,25 +126,57 @@ export const useCartStore = create(
 
       setLoading: (isLoading) => set({ isLoading }),
 
+      /**
+       * syncWithServer — called after the user logs in.
+       * Merges any guest (local) cart items into the server cart,
+       * then replaces local state with the merged server response.
+       */
       syncWithServer: async () => {
         const { isAuthenticated } = useAuthStore.getState()
-        
-        if (!isAuthenticated) {
-          // Reset cart if user is not authenticated
-          set({ items: [], total: 0, isLoading: false })
-          return
-        }
+
+        // If not authenticated, do nothing — keep local guest cart intact
+        if (!isAuthenticated) return
+
+        const { items } = get()
 
         try {
           set({ isLoading: true })
+
+          if (items.length > 0) {
+            // Build the payload for the sync/merge endpoint
+            const guestItems = items.map((item) => ({
+              productId: item.product?._id,
+              quantity: item.quantity,
+              variantId: item.variant || undefined,
+            })).filter((i) => i.productId) // strip any corrupt entries
+
+            const syncRes = await fetch("/api/cart/sync", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              credentials: "include",
+              body: JSON.stringify({ items: guestItems }),
+            })
+
+            if (syncRes.ok) {
+              const data = await syncRes.json()
+              set({
+                items: data.cart?.items || [],
+                total: data.cart?.total || calculateTotal(data.cart?.items || []),
+                isLoading: false,
+              })
+              return
+            }
+          }
+
+          // No local items (or sync failed) — just fetch server cart
           const response = await fetch("/api/cart", {
-            credentials: 'include', // Important for NextAuth session
+            credentials: "include",
           })
-          
+
           if (!response.ok) {
             throw new Error("Failed to fetch cart")
           }
-          
+
           const data = await response.json()
           set({
             items: data.items || [],
@@ -198,18 +230,15 @@ export const useWishlistStore = create(
 
       syncWithServer: async () => {
         const { isAuthenticated } = useAuthStore.getState()
-        
-        if (!isAuthenticated) {
-          // Reset wishlist if user is not authenticated
-          set({ products: [] })
-          return
-        }
+
+        // If not authenticated, do nothing — keep local wishlist intact
+        if (!isAuthenticated) return
 
         try {
           const response = await fetch("/api/wishlist", {
-            credentials: 'include', // Important for NextAuth session
+            credentials: "include",
           })
-          
+
           if (!response.ok) {
             throw new Error("Failed to fetch wishlist")
           }
